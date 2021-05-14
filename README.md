@@ -2,6 +2,11 @@
 Application pour lire les 10 derniers chapitres sortis sur `https://scantrad.net`.
 Cette application utilise une API privée.
 
+## Usage
+```
+npm start
+```
+
 ## Android APK
 [Télécharger](https://ldgr.fr/shared/ScantradFranceApp.apk)
 
