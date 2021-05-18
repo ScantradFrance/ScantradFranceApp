@@ -30,7 +30,7 @@ const ChapterSettings = ({ visible, setVisible, settingsChanged }) => {
         } catch(err) { console.error(err); }
     }
     useEffect(() => {
-        loadSettings().catch(console.error);
+        loadSettings();
     }, []);
     useEffect(() => settingsChanged("doublepage", doublePageEnabled), [doublePageEnabled]);
     useEffect(() => settingsChanged("japread", japReadEnabled), [japReadEnabled]);
@@ -50,7 +50,7 @@ const ChapterSettings = ({ visible, setVisible, settingsChanged }) => {
                 <View style={styles.settingsClose}>
                     <Button
                         title="Fermer"
-                        onPress={() => { setVisible(false); saveSettings().catch(console.error); }}
+                        onPress={() => { setVisible(false); saveSettings(); }}
                         color={colors.orange}
                     />
                 </View>

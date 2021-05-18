@@ -11,8 +11,7 @@ import LoadingScreen from './LoadingScreen';
 import BackgroundImage from './BackgroundImage';
 import secrets from '../config/secrets';
 import styles from "../assets/styles/styles";
-import colors from "../assets/styles/colors.json";
-const fetch = require('node-fetch');
+import { get } from 'axios';
 
 
 const HomeScreen = ({ navigation }) => {
@@ -20,23 +19,24 @@ const HomeScreen = ({ navigation }) => {
 	const [chapters, setChapters] = useState([]);
 	const [refreshing, setRefreshing] = useState(false);
 	const getLastChapters = async limit => {
-		return fetch(secrets.sf_api.url + "chapters/last/" + limit, {headers: new fetch.Headers({'Authorization': 'Bearer ' + secrets.sf_api.token})})
-		.then(res => res.json())
-		.catch(console.error);
+		return get(secrets.sf_api.url + "chapters/" + limit, { headers: { Authorization: `Bearer ${secrets.sf_api.token}` } }).then(res => res.data).catch(console.error);
+	};
+	const loadChapters = () => {
+		getLastChapters(15)
+			.then(chaps => {
+				if (!chaps) return;
+				setChapters(chaps);
+				setLoadingChapters(false);
+			}).catch(err => {
+				console.error(err);
+				setLoadingChapters(false);
+			});
 	};
 	const wait = timeout => {
 		return new Promise(resolve => {
 			setTimeout(resolve, timeout);
 		});
 	}
-	const loadChapters = () => {
-		getLastChapters(10)
-			.then(chaps => {
-				setLoadingChapters(false);
-				if (!chapters.length || chaps[0].title !== chapters[0].title)
-					setChapters(chaps);
-			}).catch(console.error);
-	};
 	const onRefresh = () => {
 		setRefreshing(true);
 		wait(2000).then(() => {
@@ -52,16 +52,23 @@ const HomeScreen = ({ navigation }) => {
 
 	if (isLoadingChapters)
 		return (<LoadingScreen />);
+	if (!chapters.length)
+		return (
+			<View>
+				<Text>
+					Une erreur s'est produite lors du chargement des chapitres...
+				</Text>
+			</View>
+		);
 	return (
 		<BackgroundImage>
 			<FlatList
 				style={styles.listChapters}
 				data={chapters}
-				renderItem={({item}) => <ThumbnailChapter navigation={navigation} chapter={item} />}
+				renderItem={({ item }) => <ThumbnailChapter navigation={navigation} chapter={item} />}
 				keyExtractor={item => item.title}
 				refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
 				ListHeaderComponent={ChaptersListHeader}
-				ListFooterComponent={<ChaptersListFooter navigation={navigation}/>}
 			/>
 		</BackgroundImage>
 	);
@@ -80,49 +87,12 @@ const ChaptersListHeader = () => {
 	);
 }
 
-const ChaptersListFooter = ({ navigation }) => {
-	return (
-		<View style={[styles.container, styles.homeFooter]}>
-			{/*<Text style={styles.text} onPress={() => navigation.navigate('About')}>À propos</Text>*/}
-			<Button title="À propos" onPress={() => navigation.navigate('About')} color={colors.primary}/>
-		</View>
-	);
-}
-
 const ThumbnailChapter = ({navigation, chapter}) => {
 	const sliceText = (text, max) => {
+		if (text.length <= max) return [text, ""];
 		let t = text.split(' ');
-		let n = t[0].length, i = 0; while(i < t.length && n < max) { n += t[i].length; i++; }
-		if (text.length >= max) return [t.slice(0, i-1).join(' '), t.slice(i-1).join(' ')];
-		return [t.slice(0, i).join(' '), t.slice(i).join(' ')];
-	};
-	const getTimePassed = () => {
-		let timePassed = Date.now() - new Date(chapter.release_date);
-		let time;
-		if (timePassed <= 1000*60) { // secondes
-			time = {
-				number: timePassed,
-				type: "secondes"
-			};
-		} else if (timePassed <= 1000*60*60) { // minutes
-			time = {
-				number: timePassed/1000/60,
-				type: "minutes"
-			}
-		} else if (timePassed <= 1000*60*60*24) { // heures
-			time = {
-				number: timePassed/1000/60/60,
-				type: "heures"
-			}
-		} else { // jours
-			time = {
-				number: timePassed/1000/60/60/24,
-				type: "jours"
-			}
-		}
-		time.number = Math.round(time.number);
-		if (time.number < 2) time.type = time.type.slice(0, -1);
-		return time;
+		let n = t[0].length, i = 0; while(i < t.length && n < max) { n += t[i].length+1; i++; }
+		return [t.slice(0, i-1).join(' '), t.slice(i-1).join(' ')];
 	};
 
 	return (
@@ -147,7 +117,7 @@ const ThumbnailChapter = ({navigation, chapter}) => {
 						</View>
 					</Text>
 					<Text style={[styles.text, styles.chapterPreviewNumber]}>{chapter.number}</Text>
-					<Text style={[styles.text, styles.chapterPreviewDate]}>{`Il y a ${getTimePassed().number} ${getTimePassed().type}`}</Text>
+					<Text style={[styles.text, styles.chapterPreviewDate]}>{`Il y a ${chapter.release_date}`}</Text>
 				</View>
 			</TouchableHighlight>
 		</View>

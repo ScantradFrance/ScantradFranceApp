@@ -11,11 +11,12 @@ import {
 import BackgroundImage from './BackgroundImage';
 import LoadingScreen from './LoadingScreen';
 import ChapterSettings from './ChapterSettings';
+import ViewPager from '@react-native-community/viewpager';
 import ReactNativeZoomableView from '@dudigital/react-native-zoomable-view/src/ReactNativeZoomableView';
 import styles from "../assets/styles/styles";
 import secrets from '../config/secrets';
-import { get as fetch } from 'axios';
-const CUT_NUMBER = 15;
+import { get } from 'axios';
+
 
 const ChapterScreen = ({ navigation, route }) => {
 	const [isLoadingPages, setLoadingPages] = useState(true);
@@ -26,10 +27,7 @@ const ChapterScreen = ({ navigation, route }) => {
 	const [headerVisible, setHeaderVisible] = useState(true);
 	const [settingsVisible, setSettingsVisible] = useState(false);
 	const [doublePage, setDoublePage] = useState(true);
-	const [japRead, setJapRead] = useState(true);
-
-
-	const isManga = () => !(pages[0] && pages[0].manhwa);
+	let viewPager = null;
 	const changeHeaderVisible = () => {
 		navigation.setOptions({
 			tabBarVisible: false,
@@ -37,62 +35,47 @@ const ChapterScreen = ({ navigation, route }) => {
 		});
 		setHeaderVisible(!headerVisible);
 	};
-	let lastPress = 0;
-	const onDoublePress = () => {
-		const time = new Date().getTime();
-		const delta = time - lastPress;
-
-		const DOUBLE_PRESS_DELAY = 300;
-		if (delta < DOUBLE_PRESS_DELAY)
-			changeHeaderVisible();
-		lastPress = time;
-	};
-	const changePage = op => {
-		if (op === "next" && currentPage + 1 < pages.length) setCurrentPage(currentPage + 1);
-		if (op === "previous" && currentPage > 0) setCurrentPage(currentPage - 1);
-	}
 	const settingsChanged = (type, value) => {
 		switch (type) {
 			case "doublepage":
 				setDoublePage(value);
 				break;
 			case "readstyle":
-				value ? setReadStyle("vertical") : setReadStyle("horizontal");
-				// if ((pages[0].number === 1) === value) setPages(pages.reverse());
+				value ? setReadStyle("vertical") : setReadStyle("horizontal"); 
+				if ((pages[0].number === 1) === value) reversePages();
 				break;
 			case "japread":
-				setJapRead(value);
+				if ((pages[0].number === 1) === value) reversePages();
 				break;
 		}
 	}
+	const reversePages = () => {
+		if (viewPager) {
+			setPages(pages.reverse());
+			viewPager.setPage(Math.abs(currentPage - pages.length + 1));
+		}
+	}
 	const getChapterPages = (manga_id, number) => {
-		return fetch(secrets.sf_api.url + "chapters/" + manga_id + "/" + number, { headers: { Authorization: `Bearer ${secrets.sf_api.token}` } }).then(res => res.data).catch(console.error);
+		return get(secrets.sf_api.url + "chapters/" + manga_id + "/" + number, { headers: { Authorization: `Bearer ${secrets.sf_api.token}` } }).then(res => res.data).catch(console.error);
 	};
 	const loadChapterPages = () => {
 		getChapterPages(route.params.chapter.manga.id, route.params.chapter.number).then(pages => {
 			Promise.all(pages.map(async (url, i) => {
-				return fetch(`${url}?cut=${CUT_NUMBER}`, { headers: { Authorization: `Bearer ${secrets.sf_api.token}` }}).then(async data => {
-					data = data.data.flatMap(arr => arr);
-					return await Promise.all(data.map(async (uri, j) => {
-						let ret;
-						await Image.getSize(uri,
-							(width, height) => ret = { uri: uri, width: width, height: height, number: i * data.length + j + 1, manhwa: data.length > 1 },
-							() => console.warn("La page n'a pas pu être chargée")
-						);
-						return ret;
-					}));
+				return get(url, { headers: { Authorization: `Bearer ${secrets.sf_api.token}` }}).then(async img => {
+					const uri = `data:image/png;base64,${img.data}`;
+					let ret;
+					await Image.getSize(uri,
+						(width, height) => ret = { uri: uri, width: width, height: height, number: i+1 },
+						() => console.warn("La page n'a pas pu être chargée")
+					);
+					return ret;
 				}).catch(console.error);
 			})).then(res => {
 				setLoadingPages(false);
 				if (res.includes(undefined)) return;
-				if (!res[0].height) {
-					const pages = [];
-					res.forEach(r => pages.push(...r));
-					res = pages;
-				}
-				if (res[0].manhwa) setReadStyle('vertical');
+				if (res && res[0] && res[0].height > 8 * res[0].width)
+					setReadStyle('vertical');
 				setPages(res);
-				changeHeaderVisible();
 			});
 		}).catch(err => {
 			console.error(err);
@@ -114,14 +97,11 @@ const ChapterScreen = ({ navigation, route }) => {
 	};
 	const updateHeader = () => {
 		navigation.setOptions({
-			headerRight: () => !isLoadingPages && isManga() ? (
+			headerRight: () => !isLoadingPages ? (
 				<Text>
-					{ readStyle === 'horizontal' ? (
-						<View>
-							<Text style={[styles.text, styles.pagesIndicator]}>{pages[currentPage].number}/{pages.length}</Text>
-						</View>
-						) : null
-					}
+					<View>
+						<Text style={[styles.text, styles.pagesIndicator]}>{pages[currentPage].number}/{pages.length}</Text>
+					</View>
 					<TouchableOpacity onPress={() => setSettingsVisible(true)} activeOpacity={0.6}>
 						<Image source={require('../assets/img/settings.png')} style={styles.settingsLogo} />
 					</TouchableOpacity>
@@ -138,7 +118,7 @@ const ChapterScreen = ({ navigation, route }) => {
 
 	useEffect(() => {
 		updateHeader();
-	}, [currentPage, pages, readStyle]);
+	}, [currentPage, pages]);
 
 	if (isLoadingPages)
 		return (<LoadingScreen />);
@@ -156,52 +136,61 @@ const ChapterScreen = ({ navigation, route }) => {
 		<BackgroundImage>
 			<ChapterSettings visible={settingsVisible} setVisible={setSettingsVisible} settingsChanged={settingsChanged}/>
 			{
-				isManga() && readStyle === 'horizontal' ? // manga
-					<View style={styles.fullContainer} key={pages[currentPage].number}>
-						<Pressable style={[styles.controlPages, styles.controlPagesPrevious]} onPress={() => changePage(japRead ? "next" : "previous")}></Pressable>
-						<Pressable style={[styles.controlPages, styles.controlPagesNext]} onPress={() => changePage(japRead ? "previous" : "next")}></Pressable>
-						<ReactNativeZoomableView
-							maxZoom={2.0}
-							minZoom={1}
-							zoomStep={0.2}
-							initialZoom={1}
-							bindToBorders={true}
-						>
-							<Pressable onPress={onDoublePress}>
-								<Image
-									style={[pages[currentPage].width > pages[currentPage].height && doublePage ? styles.chapterDoublePageImage : styles.chapterPageImage,
-									{ aspectRatio: pages[currentPage].width / pages[currentPage].height }
-									]}
-									source={{ uri: pages[currentPage].uri }}
-									fadeDuration={0}
-								/>
-							</Pressable>
-						</ReactNativeZoomableView>
-					</View>
+				readStyle === 'horizontal' && pages[0].height/pages[0].width < 5 ? // manga
+					<ViewPager
+						style={styles.fullContainer}
+						initialPage={0}
+						// scrollEnabled={true}
+						ref={vp => viewPager = vp}
+						onPageSelected={e => setCurrentPage(e.nativeEvent.position)}
+					>
+						{
+							pages.map((page, p) => {
+								if (page !== null)
+									return (
+										<View style={styles.fullContainer} key={p}>
+											<ReactNativeZoomableView
+												maxZoom={2.0}
+												minZoom={1}
+												zoomStep={0.5}
+												initialZoom={1}
+												bindToBorders={true}
+												onDoubleTapBefore={(e, gest, obj) => console.log(gest, obj)}
+											>
+												<Pressable onLongPress={changeHeaderVisible}>
+													<Image
+														style={[page.width > page.height && doublePage ? styles.chapterDoublePageImage : styles.chapterPageImage,
+															{aspectRatio: page.width / page.height}
+															// marginTop: page.height * dimensions.width / page.width > dimensions.height - headerHeight ? 'auto' : ((dimensions.height - headerHeight) - page.height * dimensions.width / page.width) / 2
+															]}
+														source={{ uri: page.uri }}
+														fadeDuration={0}
+													/>
+												</Pressable>
+											</ReactNativeZoomableView>
+										</View>
+									);
+							})
+						}
+					</ViewPager>
 				: // manhwa
 					<ScrollView style={styles.scrollView}>
 					{
-						pages.map(page => {
-							return (
-								<ReactNativeZoomableView
-									maxZoom={2.0}
-									minZoom={1}
-									zoomStep={0.2}
-									initialZoom={1}
-									bindToBorders={true}
-								>
-									<Pressable onPress={onDoublePress} key={page.number}>
+						pages.map((page, p) => {
+							if (page !== null)
+								return (
+									<Pressable onPress={changeHeaderVisible} key={p}>
 										<Image
 											style={{
 												...styles.chapterPageImage,
 												aspectRatio: page.width / page.height,
+												// marginTop: page.height * dimensions.width / page.width > dimensions.height - headerHeight ? 'auto' : ((dimensions.height - headerHeight) - page.height * dimensions.width / page.width) / 2
 											}}
 											source={{uri: page.uri}}
 											fadeDuration={0}
 										/>
 									</Pressable>
-								</ReactNativeZoomableView>
-							);
+								);
 						})
 					}
 					</ScrollView>

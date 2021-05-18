@@ -50,10 +50,10 @@ export default StyleSheet.create({
 	},
 	logo: {
 		aspectRatio: 0.2,
-		resizeMode: 'contain',
+		resizeMode: 'contain'
 	},
 	loadingActivity: {
-		paddingTop: 48
+		paddingTop: 64
 	},
 	banner: {
 		height: 80,
@@ -70,19 +70,33 @@ export default StyleSheet.create({
 		marginRight: 16
 	},
 	listChapters: {
-		paddingHorizontal: 16,
+		paddingHorizontal: 16
 	},
 	item: {
-		paddingVertical: 8,
+		paddingVertical: 8
 	},
 	scrollView: {
 		flex: 1,
 	},
-	homeFooter: {
-		marginTop: 32,
-		marginBottom: 16
+	tabContainer: {
+		backgroundColor: colors.primary,
+		borderTopColor: colors.orange,
+		borderTopWidth: 3
+	},
+	tabIcon: {
+		width: 24,
+		height: 24
 	},
 	/**** Chapter Preview ****/
+	mangaChapterPreview: {
+		height: 64,
+		backgroundColor: colors.primary,
+		borderRadius: 4,
+	},
+	mangaChapterPreviewShort: {
+		width: "50%",
+		alignContent: "center"
+	},
 	chapterPreviewFullContainer: {
 		backgroundColor: colors.primary,
 		borderRadius: 4,
@@ -110,6 +124,10 @@ export default StyleSheet.create({
 		marginLeft: 8,
 		overflow: 'hidden'
 	},
+	mangaPreviewName: {
+		left: 8,
+		fontSize: 18
+	},
 	chapterPreviewTitle: {
 		fontSize: 13,
 		overflow: 'visible',
@@ -119,7 +137,7 @@ export default StyleSheet.create({
 		fontSize: 16,
 		fontWeight: 'bold',
 		position: 'absolute',
-		right: 4,
+		right: 4
 	},
 	chapterPreviewDate: {
 		fontSize: 11,
@@ -134,7 +152,7 @@ export default StyleSheet.create({
 	},
 	chapterPageImage: {
 		width: dimensions.width,
-		resizeMode: 'contain'
+		// resizeMode: 'contain'
 	},
 	chapterDoublePageImage: {
 		height: dimensions.width,
@@ -149,6 +167,27 @@ export default StyleSheet.create({
 	},
 	chapterPagePagePickerItem: {
 		backgroundColor: colors.secondary
+	},
+	pagesIndicator: {
+		marginRight: 12,
+		fontSize: 16
+	},
+	pagesError: {
+		textAlign: 'center',
+		padding: 16
+	},
+	controlPages: {
+		position: "absolute",
+		height: dimensions.height,
+		width: dimensions.width * 0.12,
+		top: 0,
+		zIndex: 5
+	},
+	controlPagesNext: {
+		right: 0
+	},
+	controlPagesPrevious: {
+		left: 0
 	},
 	/**** Settings ****/
 	settingsLogo: {
@@ -190,7 +229,8 @@ export default StyleSheet.create({
 	mangaThumbnail: {
 		height: 256,
 		width: 256,
-		marginBottom: 16
+		marginBottom: 16,
+		borderRadius: 4,
 	},
 	mangaSynopsis: {
 		textAlign: 'justify'
@@ -198,6 +238,9 @@ export default StyleSheet.create({
 	mangaInfos: {
 		color: colors.orange,
 		marginVertical: 8
+	},
+	mangaText: {
+		fontSize: 16
 	},
 	/**** About ****/
 	aboutContainer: {
