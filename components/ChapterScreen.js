@@ -6,7 +6,8 @@ import {
 	ScrollView,
 	RefreshControl,
 	TouchableOpacity,
-	Pressable
+	Pressable,
+	FlatList
 } from 'react-native';
 import BackgroundImage from './BackgroundImage';
 import LoadingScreen from './LoadingScreen';
@@ -16,6 +17,21 @@ import styles from "../assets/styles/styles";
 import secrets from '../config/secrets';
 import { get as fetch } from 'axios';
 const CUT_NUMBER = 15;
+
+const VerticalPage = ({ onDoublePress, page }) => {
+	return (
+		<Pressable onPress={onDoublePress} key={page.number}>
+			<Image
+				style={{
+					...styles.chapterPageImage,
+					aspectRatio: page.width / page.height,
+				}}
+				source={{ uri: page.uri }}
+				fadeDuration={0}
+			/>
+		</Pressable>
+	);
+}
 
 const ChapterScreen = ({ navigation, route }) => {
 	const [isLoadingPages, setLoadingPages] = useState(true);
@@ -179,32 +195,11 @@ const ChapterScreen = ({ navigation, route }) => {
 						</ReactNativeZoomableView>
 					</View>
 				: // manhwa
-					<ScrollView style={styles.scrollView}>
-					{
-						pages.map(page => {
-							return (
-								<ReactNativeZoomableView
-									maxZoom={2.0}
-									minZoom={1}
-									zoomStep={0.2}
-									initialZoom={1}
-									bindToBorders={true}
-								>
-									<Pressable onPress={onDoublePress} key={page.number}>
-										<Image
-											style={{
-												...styles.chapterPageImage,
-												aspectRatio: page.width / page.height,
-											}}
-											source={{uri: page.uri}}
-											fadeDuration={0}
-										/>
-									</Pressable>
-								</ReactNativeZoomableView>
-							);
-						})
-					}
-					</ScrollView>
+					<FlatList
+						data={pages}
+						renderItem={({ item }) => <VerticalPage onDoublePress={onDoublePress} page={item} />}
+						keyExtractor={item => item.number+""}
+					/>
 			}
 		</BackgroundImage>
 	);

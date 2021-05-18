@@ -15,6 +15,10 @@
       "hidden": true,
       "barStyle": "light-content"
     },
+	"androidNavigationBar": {
+		"visible": "immersive",
+		"barStyle": "light-content"
+	},
     "primaryColor": "#F05A28",
     "updates": {
       "fallbackToCacheTimeout": 0
@@ -26,10 +30,6 @@
       "supportsTablet": true
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/img/icon.png",
-        "backgroundColor": "#FFFFFF"
-      },
       "package": "com.dastan21.ScantradFranceApp"
     },
     "web": {
