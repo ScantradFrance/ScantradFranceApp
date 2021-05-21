@@ -7,16 +7,21 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import colors from './assets/styles/colors';
 import styles from './assets/styles/styles';
-import { HomeScreen, ChapterScreen, MangaScreen, AboutScreen, MangasListScreen } from './components/screens';
+import secrets from './config/secrets';
+import { HomeScreen, ChapterScreen, MangaScreen, AboutScreen, MangasScreen, FollowsScreen } from './components/screens';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
+import { Notifications } from "expo/build/deprecated.web";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { post } from 'axios';
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
 function getTabIcon(route, focused) {
 	let icon_image;
 	switch (route) {
-		case "MangasList": icon_image = focused ? require(`./assets/img/listfilled_tabicon.png`) : require(`./assets/img/list_tabicon.png`); break;
+		case "Mangas": icon_image = focused ? require(`./assets/img/listfilled_tabicon.png`) : require(`./assets/img/list_tabicon.png`); break;
+		case "Follows": icon_image = focused ? require(`./assets/img/bookmark_filled.png`) : require(`./assets/img/bookmark.png`); break;
 		case "About": icon_image = focused ? require(`./assets/img/infofilled_tabicon.png`) : require(`./assets/img/info_tabicon.png`); break;
 		default: icon_image = focused ? require(`./assets/img/homefilled_tabicon.png`) : require(`./assets/img/home_tabicon.png`);
 	}
@@ -32,19 +37,21 @@ function TabScreens({navigation, route}) {
 			case "About":
 				options = {
 					title: 'À PROPOS',
-					headerLeft: undefined
 				}
 				break;
-			case "MangasList":
+			case "Follows":
+				options = {
+					title: 'CHAPITRES SUIVIS',
+				};
+				break;
+			case "Mangas":
 				options = {
 					title: 'LISTE DES MANGAS',
-					headerLeft: undefined
 				};
 				break;
 			default:
 				options = {
-					title: 'LES DERNIÈRES SORTIES',
-					headerLeft: () => <Image style={styles.headerLeftImage} source={require('./assets/img/flamme.png')} />
+					title: 'DERNIERS CHAPITRES',
 				};
 		}
 		navigation.setOptions(options);
@@ -62,9 +69,8 @@ function TabScreens({navigation, route}) {
 
 		>
 			<Tab.Screen name="Home" component={HomeScreen} />
-			<Tab.Screen name="MangasList" component={MangasListScreen} options={() => ({
-				title: 'Liste des mangas'
-			})} />
+			<Tab.Screen name="Follows" component={FollowsScreen} />
+			<Tab.Screen name="Mangas" component={MangasScreen} />
 			<Tab.Screen name="About" component={AboutScreen} options={{ title: 'À propos' }} />
 		</Tab.Navigator>
 	);
@@ -72,14 +78,39 @@ function TabScreens({navigation, route}) {
 
 const App = () => {
 	useEffect(() => {
-    	Image.resolveAssetSource({uri: './assets/img/flamme.png'});
     	Image.resolveAssetSource({uri: './assets/img/homefilled_tabicon.png'});
     	Image.resolveAssetSource({uri: './assets/img/home_tabicon.png'});
     	Image.resolveAssetSource({uri: './assets/img/listfilled_tabicon.png'});
     	Image.resolveAssetSource({uri: './assets/img/list_tabicon.png'});
     	Image.resolveAssetSource({uri: './assets/img/infofilled_tabicon.png'});
     	Image.resolveAssetSource({uri: './assets/img/info_tabicon.png'});
+    	Image.resolveAssetSource({uri: './assets/img/bookmark_filled.png'});
+    	Image.resolveAssetSource({uri: './assets/img/bookmark.png'});
+
+		initPushNotifs();
 	}, []);
+	
+
+	const initPushNotifs = async () => {
+		let tokenShared;
+		try {
+			tokenShared = (await AsyncStorage.getItem('tokenShared')) === "true";
+		} catch (err) { console.error(err); }
+		if (!tokenShared) {
+			Notifications.getExpoPushTokenAsync().then(token => {
+				post(secrets.sf_api.url + "users/token", {
+					token: token
+				}, {
+					headers: { Authorization: `Bearer ${secrets.sf_api.token}` }
+				}).finally(async () => {
+					try {
+						await AsyncStorage.setItem('tokenShared', "true");
+					} catch (err) { console.error(err); }
+				});
+			}).catch(console.error);
+		}
+	};
+
 	return (
 		<NavigationContainer theme={{ colors: { background: colors.background }}}>
 			<StatusBar barStyle="light-content" hidden={true} animated={true} translucent={true} backgroundColor="transparent" />

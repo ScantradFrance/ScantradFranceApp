@@ -155,7 +155,6 @@ const ChapterScreen = ({ navigation, route }) => {
 												zoomStep={0.5}
 												initialZoom={1}
 												bindToBorders={true}
-												onDoubleTapBefore={(e, gest, obj) => console.log(gest, obj)}
 											>
 												<Pressable onLongPress={changeHeaderVisible}>
 													<Image

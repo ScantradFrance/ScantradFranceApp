@@ -65,6 +65,11 @@ export default StyleSheet.create({
 		height: 32,
 		marginLeft: 16
 	},
+	headerRightBookmark: {
+		width: 24,
+		height: 24,
+		marginRight: 16
+	},
 	headerRightText: {
 		fontWeight: 'bold',
 		marginRight: 16
@@ -99,7 +104,7 @@ export default StyleSheet.create({
 	},
 	chapterPreviewFullContainer: {
 		backgroundColor: colors.primary,
-		borderRadius: 4,
+		borderRadius: 4
 	},
 	chapterPreviewThumbnailBorder: {
 		borderRightWidth: 3,
@@ -144,6 +149,23 @@ export default StyleSheet.create({
 		position: 'absolute',
 		right: 4,
 		bottom: 4
+	},
+	chapterPreviewBookmarkPressable: {
+		
+	},
+	chapterPreviewBookmarkContainer: {
+		position: 'absolute',
+		width: 48,
+		height: 48,
+		right: 0,
+		top: 8,
+	},
+	chapterPreviewBookmarkIcon: {
+		position: 'absolute',
+		top: 6,
+		right: 0,
+		width: 24,
+		height: 24,
 	},
 	/**** Chapter ****/
 	chapterPageScreen: {

@@ -4,13 +4,16 @@ import {
 	Image,
 	Text,
 	TouchableHighlight,
-	FlatList
+	FlatList,
+	TouchableOpacity
 } from 'react-native';
 import BackgroundImage from './BackgroundImage';
 import LoadingScreen from './LoadingScreen';
 import styles from "../assets/styles/styles";
 import secrets from '../config/secrets';
-import { get } from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Notifications } from "expo/build/deprecated.web";
+import { get, post } from 'axios';
 
 const ThumbnailChapter = ({ navigation, chapter, manga }) => {
 	return (
@@ -48,23 +51,71 @@ const MangaHeader = manga => {
 	)
 }
 
+const BookmarkHeader = ({ followed, setFollowed }) => {
+	return (
+		<TouchableOpacity onPress={() => setFollowed(!followed)} activeOpacity={0.6}>
+			<Image style={styles.headerRightBookmark} source={followed ? require('../assets/img/bookmark_filled.png') : require('../assets/img/bookmark.png')} />
+		</TouchableOpacity>
+	)
+}
+
 const MangaScreen = ({ navigation, route }) => {
 	
 	const [isLoadingManga, setLoadingManga] = useState(true);
 	const [manga, setManga] = useState(null);
+	const [followed, setFollowed] = useState(false);
 
 	const loadChapters = manga_id => {
 		return get(secrets.sf_api.url + "mangas/" + manga_id, { headers: { Authorization: `Bearer ${secrets.sf_api.token}` } }).then(res => res.data).catch(console.error);
 	};
 
+	const loadFollows = async manga_id => {
+		try {
+			setFollowed(!!(JSON.parse((await AsyncStorage.getItem('follows')) || "[]").find(e => e === manga_id)));
+		} catch (err) { console.error(err); }
+	};
+
+	const updateBookmark = () => {
+		navigation.setOptions({
+			headerRight: () => <BookmarkHeader followed={followed} setFollowed={setFollowed} />
+		});
+	};
+
+	const saveFollows = async () => {
+		if (!manga) return;
+		try {
+			let follows = JSON.parse((await AsyncStorage.getItem('follows')) || "[]");
+			follows = follows.filter(f => f !== manga.id);
+			if (followed) follows.push(manga.id);
+			await AsyncStorage.setItem('follows', JSON.stringify(follows));
+			Notifications.getExpoPushTokenAsync().then(token => {
+				post(secrets.sf_api.url + "users/follows", {
+					token: token,
+					follows: JSON.stringify(follows)
+				}, {
+					headers: { Authorization: `Bearer ${secrets.sf_api.token}` }
+				}).catch(console.error);
+			}).catch(console.error);
+		} catch (err) { console.error(err); }
+	}
+
 	useEffect(() => {
+		Image.resolveAssetSource({ uri: '../assets/img/bookmark_filled.png' });
+		Image.resolveAssetSource({ uri: '../assets/img/bookmark.png' });
+
 		loadChapters(route.params.manga.id)
 		.then(manga => {
 			setLoadingManga(false);
 			setManga(manga);
+			loadFollows(manga.id);
 		})
 		.catch(console.error);
 	}, []);
+
+	useEffect(() => {
+		updateBookmark();
+		saveFollows();
+	}, [followed]);
 
 	if (isLoadingManga)
 		return (<LoadingScreen />);

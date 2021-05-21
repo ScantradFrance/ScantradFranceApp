@@ -74,7 +74,6 @@ const ChapterScreen = ({ navigation, route }) => {
 				break;
 			case "readstyle":
 				value ? setReadStyle("vertical") : setReadStyle("horizontal");
-				// if ((pages[0].number === 1) === value) setPages(pages.reverse());
 				break;
 			case "japread":
 				setJapRead(value);
