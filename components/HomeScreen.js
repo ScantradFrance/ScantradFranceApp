@@ -21,18 +21,15 @@ const HomeScreen = ({ navigation }) => {
 	const [refreshing, setRefreshing] = useState(false);
 	
 	const getLastChapters = async limit => {
-		return get(secrets.sf_api.url + "chapters/" + limit, { headers: { Authorization: `Bearer ${secrets.sf_api.token}` } }).then(res => res.data).catch(console.error);
+		return get(secrets.sf_api.url + "chapters/" + limit, { headers: { Authorization: `Bearer ${secrets.sf_api.token}` } }).then(res => res.data).catch(() => {});
 	};
 	const loadChapters = () => {
 		getLastChapters(20)
 			.then(chaps => {
 				if (!chaps) return;
 				setChapters(chaps);
-				setLoadingChapters(false);
-			}).catch(err => {
-				console.error(err);
-				setLoadingChapters(false);
-			});
+			}).catch(() => {})
+			.finally(() => setLoadingChapters(false));
 	};
 	const wait = timeout => {
 		return new Promise(resolve => {
@@ -57,7 +54,7 @@ const HomeScreen = ({ navigation }) => {
 	if (!chapters.length)
 		return (
 			<View>
-				<Text>
+				<Text style={[styles.text, styles.pagesError]}>
 					Une erreur s'est produite lors du chargement des chapitres...
 				</Text>
 			</View>

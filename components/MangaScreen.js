@@ -12,7 +12,6 @@ import LoadingScreen from './LoadingScreen';
 import styles from "../assets/styles/styles";
 import secrets from '../config/secrets';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Notifications } from "expo/build/deprecated.web";
 import { get, post } from 'axios';
 
 const ThumbnailChapter = ({ navigation, chapter, manga }) => {
@@ -51,9 +50,9 @@ const MangaHeader = manga => {
 	)
 }
 
-const BookmarkHeader = ({ followed, setFollowed }) => {
+const BookmarkHeader = ({ followed, changeFollowed }) => {
 	return (
-		<TouchableOpacity onPress={() => setFollowed(!followed)} activeOpacity={0.6}>
+		<TouchableOpacity onPress={changeFollowed} activeOpacity={0.6}>
 			<Image style={styles.headerRightBookmark} source={followed ? require('../assets/img/bookmark_filled.png') : require('../assets/img/bookmark.png')} />
 		</TouchableOpacity>
 	)
@@ -61,68 +60,65 @@ const BookmarkHeader = ({ followed, setFollowed }) => {
 
 const MangaScreen = ({ navigation, route }) => {
 	
+	const [token, setToken] = useState('');
 	const [isLoadingManga, setLoadingManga] = useState(true);
 	const [manga, setManga] = useState(null);
-	const [followed, setFollowed] = useState(false);
+	const [follows, setFollows] = useState([]);
 
-	const loadChapters = manga_id => {
-		return get(secrets.sf_api.url + "mangas/" + manga_id, { headers: { Authorization: `Bearer ${secrets.sf_api.token}` } }).then(res => res.data).catch(console.error);
-	};
-
-	const loadFollows = async manga_id => {
-		try {
-			setFollowed(!!(JSON.parse((await AsyncStorage.getItem('follows')) || "[]").find(e => e === manga_id)));
-		} catch (err) { console.error(err); }
+	const loadManga = manga_id => {
+		return get(secrets.sf_api.url + "mangas/" + manga_id, { headers: { Authorization: `Bearer ${secrets.sf_api.token}` } }).then(res => res.data).catch(() => {});
 	};
 
 	const updateBookmark = () => {
 		navigation.setOptions({
-			headerRight: () => <BookmarkHeader followed={followed} setFollowed={setFollowed} />
+			headerRight: () => <BookmarkHeader followed={follows.includes(manga.id)} changeFollowed={changeFollowed} />
 		});
 	};
 
-	const saveFollows = async () => {
-		if (!manga) return;
-		try {
-			let follows = JSON.parse((await AsyncStorage.getItem('follows')) || "[]");
-			follows = follows.filter(f => f !== manga.id);
-			if (followed) follows.push(manga.id);
-			await AsyncStorage.setItem('follows', JSON.stringify(follows));
-			Notifications.getExpoPushTokenAsync().then(token => {
-				post(secrets.sf_api.url + "users/follows", {
-					token: token,
-					follows: JSON.stringify(follows)
-				}, {
-					headers: { Authorization: `Bearer ${secrets.sf_api.token}` }
-				}).catch(console.error);
-			}).catch(console.error);
-		} catch (err) { console.error(err); }
+	const changeFollowed = () => {
+		if (!follows.includes(manga.id)) setFollows(follows.concat(manga.id));
+		else setFollows(follows.filter(f => f !== manga.id));
+	};
+
+	const loadFollows = async () => {
+		setFollows(await post(secrets.sf_api.url + "users/follows",
+			{ token: token, request: "get" },
+			{ headers: { Authorization: `Bearer ${secrets.sf_api.token}` }
+		}).then(res => res.data));
+	};	
+
+	const saveFollows = () => {
+		post(secrets.sf_api.url + "users/follows", { token: token, follows: JSON.stringify(follows), request: "edit" }, { headers: { Authorization: `Bearer ${secrets.sf_api.token}` }}).catch(() => {});
 	}
 
 	useEffect(() => {
 		Image.resolveAssetSource({ uri: '../assets/img/bookmark_filled.png' });
 		Image.resolveAssetSource({ uri: '../assets/img/bookmark.png' });
 
-		loadChapters(route.params.manga.id)
-		.then(manga => {
-			setLoadingManga(false);
-			setManga(manga);
-			loadFollows(manga.id);
-		})
-		.catch(console.error);
+		AsyncStorage.getItem('token').then(token => setToken(token));
 	}, []);
 
 	useEffect(() => {
+		if (token === '') return;
+		loadManga(route.params.manga.id).then(manga => {
+			setLoadingManga(false);
+			setManga(manga);
+			loadFollows();
+		}).catch(() => {});
+	}, [token]);
+
+	useEffect(() => {
+		if (!manga) return;
 		updateBookmark();
 		saveFollows();
-	}, [followed]);
+	}, [follows]);
 
 	if (isLoadingManga)
 		return (<LoadingScreen />);
 	if (!manga)
 		return (
 			<View>
-				<Text>
+				<Text style={[styles.text, styles.pagesError]}>
 					Une erreur s'est produite lors du chargement du manga...
 				</Text>
 			</View>

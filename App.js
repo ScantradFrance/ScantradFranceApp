@@ -1,8 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
 	StatusBar,
-	Image
+	Image,
+	Platform,
+	ToastAndroid
 } from 'react-native';
+import Constants from 'expo-constants';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import colors from './assets/styles/colors';
@@ -11,11 +14,20 @@ import secrets from './config/secrets';
 import { HomeScreen, ChapterScreen, MangaScreen, AboutScreen, MangasScreen, FollowsScreen } from './components/screens';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
-import { Notifications } from "expo/build/deprecated.web";
+import * as Notifications from 'expo-notifications';
+import * as Updates from 'expo-updates';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { post } from 'axios';
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
+
+Notifications.setNotificationHandler({
+	handleNotification: async () => ({
+		shouldShowAlert: true,
+		shouldPlaySound: true,
+		shouldSetBadge: false,
+	}),
+});
 
 function getTabIcon(route, focused) {
 	let icon_image;
@@ -77,6 +89,9 @@ function TabScreens({navigation, route}) {
 }
 
 const App = () => {
+
+	const [token, setToken] = useState('');
+
 	useEffect(() => {
     	Image.resolveAssetSource({uri: './assets/img/homefilled_tabicon.png'});
     	Image.resolveAssetSource({uri: './assets/img/home_tabicon.png'});
@@ -87,29 +102,63 @@ const App = () => {
     	Image.resolveAssetSource({uri: './assets/img/bookmark_filled.png'});
     	Image.resolveAssetSource({uri: './assets/img/bookmark.png'});
 
+		checkUpdate();
 		initPushNotifs();
 	}, []);
-	
+
+	useEffect(() => {
+		AsyncStorage.setItem('token', token).catch(() => {});
+	}, [token]);
+
+	const checkUpdate = async () => {
+		try {
+			const update = await Updates.checkForUpdateAsync();
+			if (update.isAvailable) {
+				ToastAndroid.show("Mise à jour de l'application...", ToastAndroid.SHORT);
+				await Updates.fetchUpdateAsync();
+				await Updates.reloadAsync();
+			}
+		} catch (_) {}
+	};
 
 	const initPushNotifs = async () => {
-		let tokenShared;
-		try {
-			tokenShared = (await AsyncStorage.getItem('tokenShared')) === "true";
-		} catch (err) { console.error(err); }
-		if (!tokenShared) {
-			Notifications.getExpoPushTokenAsync().then(token => {
-				post(secrets.sf_api.url + "users/token", {
-					token: token
-				}, {
-					headers: { Authorization: `Bearer ${secrets.sf_api.token}` }
-				}).finally(async () => {
-					try {
-						await AsyncStorage.setItem('tokenShared', "true");
-					} catch (err) { console.error(err); }
-				});
-			}).catch(console.error);
-		}
+		registerForPushNotificationsAsync().then(token => {
+			setToken(token);
+			post(secrets.sf_api.url + "users/token", {
+				token: token
+			}, {
+				headers: { Authorization: `Bearer ${secrets.sf_api.token}` }
+			}).catch(() => {});
+		});
 	};
+
+	async function registerForPushNotificationsAsync() {
+		let token;
+		
+		// Must use physical device for Push Notifications
+		if (Constants.isDevice) {
+			const { status: existingStatus } = await Notifications.getPermissionsAsync();
+			let finalStatus = existingStatus;
+			if (existingStatus !== 'granted') {
+				const { status } = await Notifications.requestPermissionsAsync();
+				finalStatus = status;
+			}
+			// Failed to get push token for push notification!
+			if (finalStatus !== 'granted') return;
+			token = (await Notifications.getExpoPushTokenAsync().catch(() => {})).data;
+		}
+		
+		if (Platform.OS === 'android') {
+			Notifications.setNotificationChannelAsync('default', {
+				name: 'default',
+				importance: Notifications.AndroidImportance.MAX,
+				vibrationPattern: [0, 250, 250, 250],
+				lightColor: '#FF231F7C',
+			});
+		}
+		
+		return token;
+	}
 
 	return (
 		<NavigationContainer theme={{ colors: { background: colors.background }}}>
@@ -118,7 +167,6 @@ const App = () => {
 				<Stack.Screen name="Home" component={TabScreens} />
 				<Stack.Screen name="Chapter" component={ChapterScreen} options={({ route }) => ({
 					title: route.params.chapter.number + " - " + route.params.chapter.manga.name.slice(0, 15) + (route.params.chapter.manga.name.length > 15 ? "..." : "" ),
-					// headerShown: false
 				})} />
 				<Stack.Screen name="Manga" component={MangaScreen} options={({ route }) => ({
 					title: route.params.manga.name

@@ -12,8 +12,8 @@ import styles from "../assets/styles/styles";
 const AboutScreen = () => {
 	const openURL = url => {
 		Linking.canOpenURL(url).then(supported => {
-			if (supported) Linking.openURL(url).catch(console.error);
-		}).catch(console.error);
+			if (supported) Linking.openURL(url).catch(() => {});
+		}).catch(() => {});
 	}
 	return (
 		<BackgroundImage>

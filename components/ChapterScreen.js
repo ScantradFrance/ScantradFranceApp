@@ -81,7 +81,7 @@ const ChapterScreen = ({ navigation, route }) => {
 		}
 	}
 	const getChapterPages = (manga_id, number) => {
-		return fetch(secrets.sf_api.url + "chapters/" + manga_id + "/" + number, { headers: { Authorization: `Bearer ${secrets.sf_api.token}` } }).then(res => res.data).catch(console.error);
+		return fetch(secrets.sf_api.url + "chapters/" + manga_id + "/" + number, { headers: { Authorization: `Bearer ${secrets.sf_api.token}` } }).then(res => res.data).catch(() => {});
 	};
 	const loadChapterPages = () => {
 		getChapterPages(route.params.chapter.manga.id, route.params.chapter.number).then(pages => {
@@ -90,15 +90,11 @@ const ChapterScreen = ({ navigation, route }) => {
 					data = data.data.flatMap(arr => arr);
 					return await Promise.all(data.map(async (uri, j) => {
 						let ret;
-						await Image.getSize(uri,
-							(width, height) => ret = { uri: uri, width: width, height: height, number: i * data.length + j + 1, manhwa: data.length > 1 },
-							() => console.warn("La page n'a pas pu être chargée")
-						);
+						await Image.getSize(uri, (width, height) => ret = { uri: uri, width: width, height: height, number: i * data.length + j + 1, manhwa: data.length > 1 });
 						return ret;
 					}));
-				}).catch(console.error);
+				}).catch(() => {});
 			})).then(res => {
-				setLoadingPages(false);
 				if (res.includes(undefined)) return;
 				if (!res[0].height) {
 					const pages = [];
@@ -109,10 +105,8 @@ const ChapterScreen = ({ navigation, route }) => {
 				setPages(res);
 				changeHeaderVisible();
 			});
-		}).catch(err => {
-			console.error(err);
-			setLoadingPages(false);
-		});
+		}).catch(() => {})
+		.finally(() => setLoadingPages(false));
 	};
 	const wait = timeout => {
 		return new Promise(resolve => {
@@ -159,13 +153,11 @@ const ChapterScreen = ({ navigation, route }) => {
 		return (<LoadingScreen />);
 	if (!pages.length)
 	return (
-		<BackgroundImage>
-			<ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />} style={styles.scrollView}>
-				<Text style={[styles.text, styles.pagesError]}>
-					Une erreur s'est produite lors du chargement des pages...
-				</Text>
-			</ScrollView>
-		</BackgroundImage>
+		<ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />} style={styles.scrollView}>
+			<Text style={[styles.text, styles.pagesError]}>
+				Une erreur s'est produite lors du chargement des pages...
+			</Text>
+		</ScrollView>
 	)
 	return (
 		<BackgroundImage>

@@ -16,18 +16,14 @@ const ChapterSettings = ({ visible, setVisible, settingsChanged }) => {
     const [japReadEnabled, setJapReadEnabled] = useState(false);
     const [verticalReadEnabled, setVerticalReadEnabled] = useState(false);
     const saveSettings = async () => {
-        try {
-            await AsyncStorage.setItem('doublePageEnabled', doublePageEnabled.toString());
-            await AsyncStorage.setItem('japReadEnabled', japReadEnabled.toString());
-            await AsyncStorage.setItem('verticalReadEnabled', verticalReadEnabled.toString());
-        } catch (err) { console.error(err); }
+		await AsyncStorage.setItem('doublePageEnabled', doublePageEnabled.toString());
+		await AsyncStorage.setItem('japReadEnabled', japReadEnabled.toString());
+		await AsyncStorage.setItem('verticalReadEnabled', verticalReadEnabled.toString());
     }
     const loadSettings = async () => {
-        try {
-            setDoublePageEnabled(await AsyncStorage.getItem('doublePageEnabled') === "true");
-            setJapReadEnabled(await AsyncStorage.getItem('japReadEnabled') === "true");
-            setVerticalReadEnabled(await AsyncStorage.getItem('verticalReadEnabled') === "true");
-        } catch(err) { console.error(err); }
+		setDoublePageEnabled(await AsyncStorage.getItem('doublePageEnabled') === "true");
+		setJapReadEnabled(await AsyncStorage.getItem('japReadEnabled') === "true");
+		setVerticalReadEnabled(await AsyncStorage.getItem('verticalReadEnabled') === "true");
     }
     useEffect(() => {
         loadSettings();
