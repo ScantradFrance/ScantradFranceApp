@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
 	View,
 	Image,
@@ -10,11 +10,16 @@ import colors from "../assets/styles/colors";
 
 
 const LoadingScreen = () => {
+
+	useEffect(() => {
+		Image.resolveAssetSource({ uri: './assets/img/logo_nom.png' });
+	}, []);
+
 	return (
 		<BackgroundImage>
 			<View style={styles.fullContainer}>
 				<View style={styles.container}>
-					<Image source={require('../assets/img/logo.png')} style={styles.logo}/>
+					<Image source={require('../assets/img/logo_nom.png')} style={styles.logo}/>
 				</View>
 				<View style={styles.container}>
 					<ActivityIndicator size="large" color={colors.orange} style={styles.loadingActivity}/>

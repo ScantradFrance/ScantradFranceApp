@@ -6,7 +6,8 @@ import {
 	Text,
 	FlatList,
 	TouchableHighlight,
-	TouchableOpacity
+	TouchableOpacity,
+	ScrollView
 } from 'react-native';
 import BackgroundImage from './BackgroundImage';
 import LoadingScreen from './LoadingScreen';
@@ -20,18 +21,18 @@ const MangaScreen = ({navigation}) => {
 
 	const [token, setToken] = useState('');
 	const [isLoadingMangas, setLoadingMangas] = useState(true);
+	const [errorMangas, setErrorMangas] = useState(false);
 	const [mangas, setMangas] = useState([]);
 	const [refreshing, setRefreshing] = useState(false);
 	const [follows, setFollows] = useState([]);
 
 	const getMangas = () => {
-		return get(secrets.sf_api.url + "mangas/", { headers: { Authorization: `Bearer ${secrets.sf_api.token}` } }).then(res => res.data).catch(() => {});
+		return get(secrets.sf_api.url + "mangas/", { headers: { Authorization: `Bearer ${secrets.sf_api.token}` } }).then(res => res.data);
 	};
 	const loadMangas = () => {
 		getMangas().then(mangas => {
 			setMangas(mangas);
-		}).catch(() => {})
-		.finally(() => setLoadingMangas(false));
+		}).catch(() => setErrorMangas(true));
 	}
 	const wait = timeout => {
 		return new Promise(resolve => {
@@ -82,15 +83,21 @@ const MangaScreen = ({navigation}) => {
 		saveFollows();
 	}, [follows]);
 
+	useEffect(() => {
+		if (mangas.length) setLoadingMangas(false);
+	}, [mangas]);
+
 	if (isLoadingMangas)
 		return (<LoadingScreen />);
-	if (!mangas.length)
+	if (errorMangas)
 		return (
-			<View>
-				<Text style={[styles.text, styles.pagesError]}>
-					Une erreur s'est produite lors du chargement des mangas...
-				</Text>
-			</View>
+			<BackgroundImage>
+				<ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />} style={styles.scrollView}>
+					<Text style={[styles.text, styles.pagesError]}>
+						Une erreur s'est produite lors du chargement des mangas...
+					</Text>
+				</ScrollView>
+			</BackgroundImage>
 		);
 	return (
 		<BackgroundImage>

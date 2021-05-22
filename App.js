@@ -166,7 +166,7 @@ const App = () => {
 			<Stack.Navigator screenOptions={{ headerStyle: { backgroundColor: colors.primary, borderBottomWidth: 3, borderBottomColor: colors.orange, elevation: 0, shadowOpacity: 0 }, headerTintColor: colors.white, headerTitleStyle: { fontSize: 18, fontWeight: "bold" } }}>
 				<Stack.Screen name="Home" component={TabScreens} />
 				<Stack.Screen name="Chapter" component={ChapterScreen} options={({ route }) => ({
-					title: route.params.chapter.number + " - " + route.params.chapter.manga.name.slice(0, 15) + (route.params.chapter.manga.name.length > 15 ? "..." : "" ),
+					title: route.params.chapter.number + " - " + route.params.chapter.manga.name.slice(0, 13) + (route.params.chapter.manga.name.length > 13 ? "..." : "" ),
 				})} />
 				<Stack.Screen name="Manga" component={MangaScreen} options={({ route }) => ({
 					title: route.params.manga.name

@@ -62,11 +62,12 @@ const MangaScreen = ({ navigation, route }) => {
 	
 	const [token, setToken] = useState('');
 	const [isLoadingManga, setLoadingManga] = useState(true);
+	const [errorManga, setErrorManga] = useState(false);
 	const [manga, setManga] = useState(null);
 	const [follows, setFollows] = useState([]);
 
 	const loadManga = manga_id => {
-		return get(secrets.sf_api.url + "mangas/" + manga_id, { headers: { Authorization: `Bearer ${secrets.sf_api.token}` } }).then(res => res.data).catch(() => {});
+		return get(secrets.sf_api.url + "mangas/" + manga_id, { headers: { Authorization: `Bearer ${secrets.sf_api.token}` } }).then(res => res.data);
 	};
 
 	const updateBookmark = () => {
@@ -101,10 +102,9 @@ const MangaScreen = ({ navigation, route }) => {
 	useEffect(() => {
 		if (token === '') return;
 		loadManga(route.params.manga.id).then(manga => {
-			setLoadingManga(false);
 			setManga(manga);
 			loadFollows();
-		}).catch(() => {});
+		}).catch(() => setErrorManga(true));
 	}, [token]);
 
 	useEffect(() => {
@@ -113,15 +113,21 @@ const MangaScreen = ({ navigation, route }) => {
 		saveFollows();
 	}, [follows]);
 
+	useEffect(() => {
+		if (manga) setLoadingManga(false);
+	}, [manga]);
+
 	if (isLoadingManga)
 		return (<LoadingScreen />);
-	if (!manga)
+	if (errorManga)
 		return (
-			<View>
-				<Text style={[styles.text, styles.pagesError]}>
-					Une erreur s'est produite lors du chargement du manga...
-				</Text>
-			</View>
+			<BackgroundImage>
+				<View>
+					<Text style={[styles.text, styles.pagesError]}>
+						Une erreur s'est produite lors du chargement du manga...
+					</Text>
+				</View>
+			</BackgroundImage>
 		);
 	return (
 		<BackgroundImage>

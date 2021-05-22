@@ -5,7 +5,8 @@ import {
 	FlatList,
 	RefreshControl,
 	Text,
-	TouchableHighlight
+	TouchableHighlight,
+	ScrollView
 } from 'react-native';
 import LoadingScreen from './LoadingScreen';
 import BackgroundImage from './BackgroundImage';
@@ -17,19 +18,19 @@ import { get } from 'axios';
 
 const HomeScreen = ({ navigation }) => {
 	const [isLoadingChapters, setLoadingChapters] = useState(true);
+	const [errorChapters, setErrorChapters] = useState(false);
 	const [chapters, setChapters] = useState([]);
 	const [refreshing, setRefreshing] = useState(false);
 	
 	const getLastChapters = async limit => {
-		return get(secrets.sf_api.url + "chapters/" + limit, { headers: { Authorization: `Bearer ${secrets.sf_api.token}` } }).then(res => res.data).catch(() => {});
+		return get(secrets.sf_api.url + "chapters/" + limit, { headers: { Authorization: `Bearer ${secrets.sf_api.token}` } }).then(res => res.data);
 	};
 	const loadChapters = () => {
 		getLastChapters(20)
 			.then(chaps => {
 				if (!chaps) return;
 				setChapters(chaps);
-			}).catch(() => {})
-			.finally(() => setLoadingChapters(false));
+			}).catch(() => setErrorChapters(true));
 	};
 	const wait = timeout => {
 		return new Promise(resolve => {
@@ -49,15 +50,21 @@ const HomeScreen = ({ navigation }) => {
 		loadChapters();
 	},[]);
 
+	useEffect(() => {
+		if (chapters) setLoadingChapters();
+	}, [chapters]);
+
 	if (isLoadingChapters)
 		return (<LoadingScreen />);
-	if (!chapters.length)
+	if (errorChapters)
 		return (
-			<View>
-				<Text style={[styles.text, styles.pagesError]}>
-					Une erreur s'est produite lors du chargement des chapitres...
-				</Text>
-			</View>
+			<BackgroundImage>
+				<ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />} style={styles.scrollView}>
+					<Text style={[styles.text, styles.pagesError]}>
+						Une erreur s'est produite lors du chargement des chapitres...
+					</Text>
+				</ScrollView>
+			</BackgroundImage>
 		);
 	return (
 		<BackgroundImage>

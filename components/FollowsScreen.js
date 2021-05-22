@@ -20,11 +20,12 @@ const MangaScreen = ({navigation}) => {
 
 	const [token, setToken] = useState('');
 	const [isLoadingChapters, setLoadingChapters] = useState(true);
+	const [errorChapters, setErrorChapters] = useState(false);
 	const [chapters, setChapters] = useState(null);
 	const [refreshing, setRefreshing] = useState(false);
 
 	const getLastChapters = async limit => {
-		return get(secrets.sf_api.url + "chapters/" + limit, { headers: { Authorization: `Bearer ${secrets.sf_api.token}` } }).then(res => res.data).catch(() => {});
+		return get(secrets.sf_api.url + "chapters/" + limit, { headers: { Authorization: `Bearer ${secrets.sf_api.token}` } }).then(res => res.data);
 	};
 
 	const loadChapters = () => {
@@ -35,9 +36,8 @@ const MangaScreen = ({navigation}) => {
 					.then(res => res.data)
 					.then(follows => {
 						setChapters(chaps.filter(c => follows.includes(c.manga.id)));
-					}).catch(() => {});
-			}).catch(() => {})
-			.finally(() => setLoadingChapters(false));
+					}).catch(() => setErrorChapters(true));
+			}).catch(() => setErrorChapters(true));
 	};
 
 	const wait = timeout => {
@@ -63,19 +63,25 @@ const MangaScreen = ({navigation}) => {
 		if (token !== '') loadChapters();
 	}, [token]);
 
+	useEffect(() => {
+		if (chapters) setLoadingChapters(false);
+	}, [chapters]);
+
 	if (isLoadingChapters)
 		return (<LoadingScreen />);
-	if (!(chapters && chapters.length))
+	if (!chapters.length)
 		return (
-			<ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />} style={styles.scrollView}>
-				<Text style={[styles.text, styles.pagesError]}>
-					{ !chapters ?
-						"Une erreur s'est produite lors du chargement des chapitres..."
-						:
-						"Aucun manga suivis ou de récents chapitres."
-					}
-				</Text>
-			</ScrollView>
+			<BackgroundImage>
+				<ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />} style={styles.scrollView}>
+					<Text style={[styles.text, styles.pagesError]}>
+						{ errorChapters ?
+							"Une erreur s'est produite lors du chargement des chapitres..."
+							:
+							"Aucun manga suivis ou récents chapitres."
+						}
+					</Text>
+				</ScrollView>
+			</BackgroundImage>
 		);
 	return (
 		<BackgroundImage>

@@ -16,7 +16,7 @@ import ReactNativeZoomableView from '@dudigital/react-native-zoomable-view/src/R
 import styles from "../assets/styles/styles";
 import secrets from '../config/secrets';
 import { get as fetch } from 'axios';
-const CUT_NUMBER = 15;
+const CUT_NUMBER = 10;
 
 const VerticalPage = ({ onDoublePress, page }) => {
 	return (
@@ -35,6 +35,7 @@ const VerticalPage = ({ onDoublePress, page }) => {
 
 const ChapterScreen = ({ navigation, route }) => {
 	const [isLoadingPages, setLoadingPages] = useState(true);
+	const [errorChapters, setErrorChapters] = useState(false);
 	const [pages, setPages] = useState([]);
 	const [refreshing, setRefreshing] = useState(false);
 	const [currentPage, setCurrentPage] = useState(0);
@@ -81,7 +82,7 @@ const ChapterScreen = ({ navigation, route }) => {
 		}
 	}
 	const getChapterPages = (manga_id, number) => {
-		return fetch(secrets.sf_api.url + "chapters/" + manga_id + "/" + number, { headers: { Authorization: `Bearer ${secrets.sf_api.token}` } }).then(res => res.data).catch(() => {});
+		return fetch(secrets.sf_api.url + "chapters/" + manga_id + "/" + number, { headers: { Authorization: `Bearer ${secrets.sf_api.token}` } }).then(res => res.data);
 	};
 	const loadChapterPages = () => {
 		getChapterPages(route.params.chapter.manga.id, route.params.chapter.number).then(pages => {
@@ -93,7 +94,7 @@ const ChapterScreen = ({ navigation, route }) => {
 						await Image.getSize(uri, (width, height) => ret = { uri: uri, width: width, height: height, number: i * data.length + j + 1, manhwa: data.length > 1 });
 						return ret;
 					}));
-				}).catch(() => {});
+				}).catch(() => setErrorChapters(true));
 			})).then(res => {
 				if (res.includes(undefined)) return;
 				if (!res[0].height) {
@@ -105,8 +106,7 @@ const ChapterScreen = ({ navigation, route }) => {
 				setPages(res);
 				changeHeaderVisible();
 			});
-		}).catch(() => {})
-		.finally(() => setLoadingPages(false));
+		}).catch(() => setErrorChapters(true));
 	};
 	const wait = timeout => {
 		return new Promise(resolve => {
@@ -147,17 +147,23 @@ const ChapterScreen = ({ navigation, route }) => {
 
 	useEffect(() => {
 		updateHeader();
-	}, [currentPage, pages, readStyle]);
+	}, [currentPage, pages, readStyle, isLoadingPages]);
+
+	useEffect(() => {
+		if (pages.length) setLoadingPages(false);
+	}, [pages]);
 
 	if (isLoadingPages)
 		return (<LoadingScreen />);
-	if (!pages.length)
+	if (errorChapters)
 	return (
-		<ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />} style={styles.scrollView}>
-			<Text style={[styles.text, styles.pagesError]}>
-				Une erreur s'est produite lors du chargement des pages...
-			</Text>
-		</ScrollView>
+		<BackgroundImage>
+			<ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />} style={styles.scrollView}>
+				<Text style={[styles.text, styles.pagesError]}>
+					Une erreur s'est produite lors du chargement des pages...
+				</Text>
+			</ScrollView>
+		</BackgroundImage>
 	)
 	return (
 		<BackgroundImage>
@@ -186,11 +192,19 @@ const ChapterScreen = ({ navigation, route }) => {
 						</ReactNativeZoomableView>
 					</View>
 				: // manhwa
-					<FlatList
-						data={pages}
-						renderItem={({ item }) => <VerticalPage onDoublePress={onDoublePress} page={item} />}
-						keyExtractor={item => item.number+""}
-					/>
+					<ReactNativeZoomableView
+						maxZoom={2.0}
+						minZoom={1}
+						zoomStep={0.2}
+						initialZoom={1}
+						bindToBorders={true}
+					>			
+						<FlatList
+							data={pages}
+							renderItem={({ item }) => <VerticalPage onDoublePress={onDoublePress} page={item} />}
+							keyExtractor={item => item.number+""}
+						/>
+					</ReactNativeZoomableView>
 			}
 		</BackgroundImage>
 	);
