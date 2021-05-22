@@ -140,9 +140,10 @@ const ChapterScreen = ({ navigation, route }) => {
 	}
 
 	useEffect(() => {
+		Image.resolveAssetSource({uri: '../assets/img/settings.png'});
+		
 		updateHeader();
 		loadChapterPages();
-		Image.resolveAssetSource({uri: '../assets/img/settings.png'});
 	}, []);
 
 	useEffect(() => {

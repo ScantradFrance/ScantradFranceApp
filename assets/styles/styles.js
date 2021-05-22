@@ -38,8 +38,7 @@ export default StyleSheet.create({
 	},
 	text: {
 		fontSize: 18,
-		color: colors.white,
-		// fontFamily: "Source Sans Pro"
+		color: colors.white
 	},
 	link: {
 		fontSize: 18,
@@ -268,12 +267,29 @@ export default StyleSheet.create({
 	aboutContainer: {
 		flex: 1,
 		marginVertical: 32,
-		textAlign: 'left'
+		textAlign: 'left',
+		alignItems: 'center'
 	},
 	aboutTitle: {
 		fontSize: 20,
 		fontWeight: 'bold',
-		marginTop: 16,
-		marginBottom: 8
+		marginTop: 8
+	},
+	aboutImage: {
+		width: 80,
+		height: 80,
+		borderRadius: 80,
+		borderColor: colors.orange,
+		borderWidth: 1
+	},
+	aboutVersion: {
+		marginBottom: 16,
+		marginRight: 32,
+		width: "100%"
+	},
+	aboutVersionText: {
+		fontSize: 12,
+		color: colors.secondary,
+		textAlign: 'right'
 	}
 });

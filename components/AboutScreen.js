@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
 	View,
 	Image,
@@ -15,22 +15,32 @@ const AboutScreen = () => {
 			if (supported) Linking.openURL(url).catch(() => {});
 		}).catch(() => {});
 	}
+
+	useEffect(() => {
+		Image.resolveAssetSource({ uri: '../assets/img/about_icon.png' });
+	}, []);
+
 	return (
 		<BackgroundImage>
 			<View style={styles.container}>
 				<View style={styles.container}>
 					<View style={styles.aboutContainer}>
-						<Text style={[styles.text, styles.aboutTitle]}>Team Scantrad France :</Text>
+						<Image style={styles.aboutImage} source={require('../assets/img/about_icon.png')}></Image>
+						<Text style={[styles.text, styles.aboutTitle]}>Team Scantrad France</Text>
 						<Text style={styles.text}>Équipe de traduction de divers mangas.</Text>
 						<Text style={styles.link} onPress={() => openURL("https://linktr.ee/scantradfrance")}>Linktree</Text>
 					</View>
 				</View>
 				<View style={styles.container}>
 					<View style={styles.aboutContainer}>
-						<Text style={[styles.text, styles.aboutTitle]}>Dastan21 :</Text>
+						<Image style={styles.aboutImage} source={{ uri: "https://avatars.githubusercontent.com/u/58090137?v=4" }}></Image>
+						<Text style={[styles.text, styles.aboutTitle]}>Dastan21</Text>
 						<Text style={styles.text}>Développeur de l'application mobile.</Text>
 						<Text style={styles.link} onPress={() => openURL("https://github.com/Dastan21")}>Github</Text>
 					</View>
+				</View>
+				<View style={styles.aboutVersion}>
+					<Text style={[styles.text, styles.aboutVersionText]}>v2.2.1</Text>
 				</View>
 			</View>
 		</BackgroundImage>
