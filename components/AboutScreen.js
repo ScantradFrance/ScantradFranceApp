@@ -40,7 +40,7 @@ const AboutScreen = () => {
 					</View>
 				</View>
 				<View style={styles.aboutVersion}>
-					<Text style={[styles.text, styles.aboutVersionText]}>v2.2.1</Text>
+					<Text style={[styles.text, styles.aboutVersionText]}>v2.3.0</Text>
 				</View>
 			</View>
 		</BackgroundImage>

@@ -7,13 +7,14 @@ import {
 	FlatList,
 	TouchableHighlight,
 	TouchableOpacity,
-	ScrollView
+	ScrollView,
+	ToastAndroid
 } from 'react-native';
 import BackgroundImage from './BackgroundImage';
 import LoadingScreen from './LoadingScreen';
 import BannerHeader from './BannerHeader';
 import styles from "../assets/styles/styles";
-import secrets from '../config/secrets';
+import { sf_api } from '../config/secrets';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { get, post } from 'axios';
 
@@ -27,26 +28,22 @@ const MangaScreen = ({navigation}) => {
 	const [follows, setFollows] = useState([]);
 
 	const getMangas = () => {
-		return get(secrets.sf_api.url + "mangas/", { headers: { Authorization: `Bearer ${secrets.sf_api.token}` } }).then(res => res.data);
+		return get(sf_api.url + "mangas/").then(res => res.data);
 	};
+
 	const loadMangas = () => {
 		getMangas().then(mangas => {
 			setMangas(mangas);
 		}).catch(() => setErrorMangas(true));
 	}
-	const wait = timeout => {
-		return new Promise(resolve => {
-			setTimeout(resolve, timeout);
-		});
-	}
+	
 	const onRefresh = () => {
 		setRefreshing(true);
-		wait(2000).then(() => {
-			setLoadingMangas(true);
-			loadFollows();
-			loadMangas();
-			setRefreshing(false);
-		});
+		setErrorMangas(false);
+		setLoadingMangas(true);
+		loadFollows();
+		loadMangas();
+		setRefreshing(false);
 	};
 
 	const changeFollowed = manga_id => {
@@ -55,15 +52,14 @@ const MangaScreen = ({navigation}) => {
 	};
 
 	const loadFollows = async () => {
-		setFollows(await post(secrets.sf_api.url + "users/follows",
+		setFollows(await post(sf_api.url + "users/follows",
 			{ token: token, request: "get" },
-			{
-				headers: { Authorization: `Bearer ${secrets.sf_api.token}` }
-			}).then(res => res.data));
+			{ headers: { Authorization: `Bearer ${sf_api.token}` }}
+		).then(res => res.data));
 	};
 
 	const saveFollows = () => {
-		post(secrets.sf_api.url + "users/follows", { token: token, follows: JSON.stringify(follows), request: "edit" }, { headers: { Authorization: `Bearer ${secrets.sf_api.token}` } }).catch(() => { });
+		post(sf_api.url + "users/follows", { token: token, follows: JSON.stringify(follows), request: "edit" }, { headers: { Authorization: `Bearer ${sf_api.token}` } }).catch(() => { });
 	}
 
 	useEffect(() => {
@@ -84,16 +80,16 @@ const MangaScreen = ({navigation}) => {
 	}, [follows]);
 
 	useEffect(() => {
-		if (mangas.length) setLoadingMangas(false);
-	}, [mangas]);
+		if (mangas.length || errorMangas) setLoadingMangas(false);
+	}, [mangas, errorMangas]);
 
 	if (isLoadingMangas)
 		return (<LoadingScreen />);
 	if (errorMangas)
 		return (
 			<BackgroundImage>
-				<ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />} style={styles.scrollView}>
-					<Text style={[styles.text, styles.pagesError]}>
+				<ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />} contentContainerStyle={styles.scrollView}>
+					<Text style={[styles.text, styles.pagesErrorText]}>
 						Une erreur s'est produite lors du chargement des mangas...
 					</Text>
 				</ScrollView>
@@ -116,6 +112,7 @@ const MangaScreen = ({navigation}) => {
 const ThumbnailManga = ({ navigation, manga, isFollowing, changeFollowed }) => {
 
 	const [followed, setFollowed] = useState(isFollowing);
+	const [first, setFirst] = useState(true);
 
 	const change = () => {
 		setFollowed(!followed);
@@ -128,6 +125,11 @@ const ThumbnailManga = ({ navigation, manga, isFollowing, changeFollowed }) => {
 		let n = 0, i = 0; while (i < t.length && n <= max) { n += t[i].length+1; i++; }
 		return [t.slice(0, i-1).join(' '), t.slice(i-1).join(' ')];
 	};
+
+	useEffect(() => {
+		if (!first)	ToastAndroid.show(followed ? "Manga ajouté aux favoris" : "Manga retiré des favoris", ToastAndroid.SHORT);
+		else setFirst(false);
+	}, [followed]);
 
 	return (
 		<View style={styles.item}>
@@ -153,7 +155,7 @@ const ThumbnailManga = ({ navigation, manga, isFollowing, changeFollowed }) => {
 				</View>
 			</TouchableHighlight>
 			<TouchableOpacity style={styles.chapterPreviewBookmarkContainer} onPress={change} activeOpacity={0.6}>
-				<View style={styles.chapterPreviewBookmarkPressable}>
+				<View>
 					<Image style={styles.chapterPreviewBookmarkIcon} source={followed ? require('../assets/img/bookmark_filled.png') : require('../assets/img/bookmark.png')} />
 				</View>
 			</TouchableOpacity>

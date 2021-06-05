@@ -4,6 +4,7 @@ import ChapterScreen from './ChapterScreen';
 import MangaScreen from './MangaScreen';
 import MangasScreen from './MangasScreen';
 import FollowsScreen from './FollowsScreen';
+import DownloadsScreen from './DownloadsScreen';
 import AboutScreen from './AboutScreen';
 
 
@@ -14,5 +15,6 @@ module.exports = {
 	MangasScreen: MangasScreen,
 	MangaScreen: MangaScreen,
 	FollowsScreen: FollowsScreen,
+	DownloadsScreen: DownloadsScreen,
 	AboutScreen: AboutScreen
 };

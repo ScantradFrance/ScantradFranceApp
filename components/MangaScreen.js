@@ -10,7 +10,7 @@ import {
 import BackgroundImage from './BackgroundImage';
 import LoadingScreen from './LoadingScreen';
 import styles from "../assets/styles/styles";
-import secrets from '../config/secrets';
+import { sf_api } from '../config/secrets';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { get, post } from 'axios';
 
@@ -26,7 +26,7 @@ const ThumbnailChapter = ({ navigation, chapter, manga }) => {
 						</View>
 					</Text>
 					<View>
-						<Text style={[styles.text, styles.chapterPreviewNumber, { top: -64 }]}>Chapitre {chapter.number}</Text>
+						<Text style={[styles.text, styles.chapterPreviewNumber, styles.chapterPreviewNumberRight, { top: -64 }]}>Chapitre {chapter.number}</Text>
 						<Text style={[styles.text, styles.chapterPreviewDate]}>{`Il y a ${chapter.release_date}`}</Text>
 					</View>
 				</View>
@@ -67,7 +67,7 @@ const MangaScreen = ({ navigation, route }) => {
 	const [follows, setFollows] = useState([]);
 
 	const loadManga = manga_id => {
-		return get(secrets.sf_api.url + "mangas/" + manga_id, { headers: { Authorization: `Bearer ${secrets.sf_api.token}` } }).then(res => res.data);
+		return get(sf_api.url + "mangas/" + manga_id).then(res => res.data);
 	};
 
 	const updateBookmark = () => {
@@ -82,14 +82,14 @@ const MangaScreen = ({ navigation, route }) => {
 	};
 
 	const loadFollows = async () => {
-		setFollows(await post(secrets.sf_api.url + "users/follows",
+		setFollows(await post(sf_api.url + "users/follows",
 			{ token: token, request: "get" },
-			{ headers: { Authorization: `Bearer ${secrets.sf_api.token}` }
+			{ headers: { Authorization: `Bearer ${sf_api.token}` }
 		}).then(res => res.data));
 	};	
 
 	const saveFollows = () => {
-		post(secrets.sf_api.url + "users/follows", { token: token, follows: JSON.stringify(follows), request: "edit" }, { headers: { Authorization: `Bearer ${secrets.sf_api.token}` }}).catch(() => {});
+		post(sf_api.url + "users/follows", { token: token, follows: JSON.stringify(follows), request: "edit" }, { headers: { Authorization: `Bearer ${sf_api.token}` }}).catch(() => {});
 	}
 
 	useEffect(() => {
@@ -123,7 +123,7 @@ const MangaScreen = ({ navigation, route }) => {
 		return (
 			<BackgroundImage>
 				<View>
-					<Text style={[styles.text, styles.pagesError]}>
+					<Text style={[styles.text, styles.pagesErrorText]}>
 						Une erreur s'est produite lors du chargement du manga...
 					</Text>
 				</View>

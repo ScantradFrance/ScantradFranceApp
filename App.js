@@ -10,8 +10,8 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import colors from './assets/styles/colors';
 import styles from './assets/styles/styles';
-import secrets from './config/secrets';
-import { HomeScreen, ChapterScreen, MangaScreen, AboutScreen, MangasScreen, FollowsScreen } from './components/screens';
+import { sf_api } from './config/secrets';
+import { HomeScreen, ChapterScreen, MangaScreen, AboutScreen, MangasScreen, FollowsScreen, DownloadsScreen } from './components/screens';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
@@ -34,6 +34,7 @@ function getTabIcon(route, focused) {
 	switch (route) {
 		case "Mangas": icon_image = focused ? require(`./assets/img/listfilled_tabicon.png`) : require(`./assets/img/list_tabicon.png`); break;
 		case "Follows": icon_image = focused ? require(`./assets/img/bookmark_filled.png`) : require(`./assets/img/bookmark.png`); break;
+		case "Downloads": icon_image = focused ? require(`./assets/img/download_filled.png`) : require(`./assets/img/download.png`); break;
 		case "About": icon_image = focused ? require(`./assets/img/infofilled_tabicon.png`) : require(`./assets/img/info_tabicon.png`); break;
 		default: icon_image = focused ? require(`./assets/img/homefilled_tabicon.png`) : require(`./assets/img/home_tabicon.png`);
 	}
@@ -54,6 +55,11 @@ function TabScreens({navigation, route}) {
 			case "Follows":
 				options = {
 					title: 'CHAPITRES SUIVIS',
+				};
+				break;
+			case "Downloads":
+				options = {
+					title: 'CHAPITRES TÉLÉCHARGÉS',
 				};
 				break;
 			case "Mangas":
@@ -82,6 +88,7 @@ function TabScreens({navigation, route}) {
 		>
 			<Tab.Screen name="Home" component={HomeScreen} />
 			<Tab.Screen name="Follows" component={FollowsScreen} />
+			<Tab.Screen name="Downloads" component={DownloadsScreen} />
 			<Tab.Screen name="Mangas" component={MangasScreen} />
 			<Tab.Screen name="About" component={AboutScreen} options={{ title: 'À propos' }} />
 		</Tab.Navigator>
@@ -101,6 +108,8 @@ const App = () => {
     	Image.resolveAssetSource({uri: './assets/img/info_tabicon.png'});
     	Image.resolveAssetSource({uri: './assets/img/bookmark_filled.png'});
     	Image.resolveAssetSource({uri: './assets/img/bookmark.png'});
+		Image.resolveAssetSource({uri: './assets/img/download_filled.png'});
+		Image.resolveAssetSource({uri: './assets/img/download.png'});
 
 		checkUpdate();
 		initPushNotifs();
@@ -124,11 +133,10 @@ const App = () => {
 	const initPushNotifs = async () => {
 		registerForPushNotificationsAsync().then(token => {
 			setToken(token);
-			post(secrets.sf_api.url + "users/token", {
-				token: token
-			}, {
-				headers: { Authorization: `Bearer ${secrets.sf_api.token}` }
-			}).catch(() => {});
+			post(sf_api.url + "users/token",
+				{ token: token },
+				{ headers: { Authorization: `Bearer ${sf_api.token}` }}
+			).catch(() => {});
 		});
 	};
 

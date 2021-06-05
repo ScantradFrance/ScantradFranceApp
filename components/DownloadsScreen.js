@@ -6,40 +6,29 @@ import {
 	Text,
 	FlatList,
 	TouchableHighlight,
-	ScrollView
+	ScrollView,
+	TouchableOpacity
 } from 'react-native';
 import BackgroundImage from './BackgroundImage';
 import LoadingScreen from './LoadingScreen';
 import BannerHeader from './BannerHeader';
 import styles from "../assets/styles/styles";
-import { sf_api } from '../config/secrets';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { get, post } from 'axios';
+import * as FileSystem from 'expo-file-system';
 
-const FollowsScreen = ({navigation}) => {
+const DownloadsScreen = ({navigation}) => {
 
-	const [token, setToken] = useState('');
 	const [isLoadingChapters, setLoadingChapters] = useState(true);
 	const [errorChapters, setErrorChapters] = useState(false);
 	const [chapters, setChapters] = useState(null);
 	const [refreshing, setRefreshing] = useState(false);
 
-	const getLastChapters = async limit => {
-		return get(sf_api.url + "chapters/" + limit).then(res => res.data);
-	};
-
 	const loadChapters = () => {
-		getLastChapters(20)
-			.then(chaps => {
-				if (!chaps) return;
-				post(sf_api.url + "users/follows",
-					{ token: token, request: "get" },
-					{ headers: { Authorization: `Bearer ${sf_api.token}` } }
-				).then(res => res.data).then(follows => {
-					setChapters(chaps.filter(c => follows.includes(c.manga.id)));
-				}).catch(() => setErrorChapters(true));
-			}).catch(() => setErrorChapters(true));
-	};
+		AsyncStorage.getItem('downloads').then(d => JSON.parse(d || "{}")).then(downloads => {
+			setChapters(Object.values(downloads));
+			setLoadingChapters(false);
+		}).catch(() => setErrorChapters(true));
+	}
 
 	const onRefresh = () => {
 		setRefreshing(true);
@@ -49,13 +38,29 @@ const FollowsScreen = ({navigation}) => {
 		setRefreshing(false);
 	};
 
+	const deleteDownload = download_id => {
+		const folderpath = `${FileSystem.documentDirectory}${download_id}/`;
+		AsyncStorage.getItem('downloads').then(d => JSON.parse(d || "{}")).then(downloads => {
+			if (!Object.keys(downloads)) return;
+			FileSystem.deleteAsync(folderpath, { idempotent: true }).then(() => {
+				delete downloads[download_id];
+				AsyncStorage.setItem('downloads', JSON.stringify(downloads)).then(() => {
+					setLoadingChapters(true);
+					loadChapters();
+				});
+			});
+		}).catch(() => ToastAndroid.show("Erreur lors de la suppression du chapitre", ToastAndroid.SHORT));
+	};
+	
 	useEffect(() => {
-		AsyncStorage.getItem('token').then(token => setToken(token));
+		Image.resolveAssetSource({ uri: '../assets/img/delete.png' });
+		
+		loadChapters();
+		
+		// DEBUG
+		// FileSystem.getInfoAsync(`${FileSystem.documentDirectory}le-samoura-insaisissable-018/`).then(res => console.log(res)).catch(console.error);
+		// FileSystem.readDirectoryAsync(FileSystem.documentDirectory).then(res => console.log(res)).catch(console.error);
 	}, []);
-
-	useEffect(() => {
-		if (token !== '') loadChapters();
-	}, [token]);
 
 	useEffect(() => {
 		if (chapters || errorChapters) setLoadingChapters(false);
@@ -71,7 +76,7 @@ const FollowsScreen = ({navigation}) => {
 						{ errorChapters ?
 							"Une erreur s'est produite lors du chargement des chapitres..."
 							:
-							"Aucun manga suivis ou récents chapitres."
+							"Aucun chapitre téléchargé."
 						}
 					</Text>
 				</ScrollView>
@@ -82,7 +87,7 @@ const FollowsScreen = ({navigation}) => {
 			<FlatList
 				style={styles.listChapters}
 				data={chapters}
-				renderItem={({ item }) => <ThumbnailChapter navigation={navigation} chapter={item} />}
+				renderItem={({ item }) => <ThumbnailChapter navigation={navigation} chapter={item} deleteDownload={deleteDownload} />}
 				keyExtractor={item => item.title}
 				refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
 				ListHeaderComponent={BannerHeader}
@@ -91,7 +96,7 @@ const FollowsScreen = ({navigation}) => {
 	);
 }
 
-const ThumbnailChapter = ({ navigation, chapter }) => {
+const ThumbnailChapter = ({ navigation, chapter, deleteDownload }) => {
 	const sliceText = (text, max) => {
 		if (text.length <= max) return [text, ""];
 		let t = text.split(' ');
@@ -101,7 +106,7 @@ const ThumbnailChapter = ({ navigation, chapter }) => {
 
 	return (
 		<View style={styles.item}>
-			<TouchableHighlight style={styles.chapterPreviewFullContainer} onPress={() => navigation.navigate('Chapter', { chapter: chapter })}>
+			<TouchableHighlight style={styles.chapterPreviewFullContainer} onPress={() => navigation.navigate('Chapter', { chapter: { manga: chapter.manga, number: chapter.number, downloaded: true } })}>
 				<View>
 					<Text>
 						<TouchableHighlight style={styles.chapterPreviewContainer} onPress={() => navigation.navigate('Manga', { manga: chapter.manga })}>
@@ -112,7 +117,7 @@ const ThumbnailChapter = ({ navigation, chapter }) => {
 						</TouchableHighlight>
 						<View style={styles.chapterPreviewContainer}>
 							<View style={{ flexWrap: 'nowrap' }}>
-								<Text style={[styles.text, styles.chapterPreviewName]}>{chapter.manga.name.slice(0, 28) + (chapter.manga.name.length > 28 ? "-" : "")}</Text>
+								<Text style={[styles.text, styles.chapterPreviewName]}>{chapter.manga.name.slice(0, 23) + (chapter.manga.name.length > 28 ? "-" : "")}</Text>
 							</View>
 							<View>
 								<Text style={[styles.text, styles.chapterPreviewTitle]}>{sliceText(chapter.title, 43)[0]}</Text>
@@ -120,13 +125,18 @@ const ThumbnailChapter = ({ navigation, chapter }) => {
 							</View>
 						</View>
 					</Text>
-					<Text style={[styles.text, styles.chapterPreviewNumber, styles.chapterPreviewNumberRight]}>{chapter.number}</Text>
+					<Text style={[styles.text, styles.chapterPreviewNumber]}>{chapter.number}</Text>
 					<Text style={[styles.text, styles.chapterPreviewDate]}>{`Il y a ${chapter.release_date}`}</Text>
 				</View>
 			</TouchableHighlight>
+			<TouchableOpacity style={styles.chapterPreviewDownloadContainer} onPress={() => deleteDownload(chapter.manga.id + "-" + chapter.number)} activeOpacity={0.6}>
+				<View>
+					<Image style={[styles.chapterPreviewDownloadIcon, styles.chapterPreviewDeleteIcon]} source={require('../assets/img/delete.png')} />
+				</View>
+			</TouchableOpacity>
 		</View>
 	);
 };
 
 
-module.exports = FollowsScreen;
+module.exports = DownloadsScreen;

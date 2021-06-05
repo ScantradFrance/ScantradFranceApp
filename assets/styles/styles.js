@@ -80,7 +80,8 @@ export default StyleSheet.create({
 		paddingVertical: 8
 	},
 	scrollView: {
-		flex: 1,
+		flexGrow: 1,
+		justifyContent: 'center'
 	},
 	tabContainer: {
 		backgroundColor: colors.primary,
@@ -137,20 +138,26 @@ export default StyleSheet.create({
 		overflow: 'visible',
 		marginLeft: 8,
 	},
+	chapterPreviewProgress: {
+		position: 'absolute',
+		left: -64,
+		zIndex: 1,
+		backgroundColor: colors.orange + "aa"
+	},
 	chapterPreviewNumber: {
 		fontSize: 16,
 		fontWeight: 'bold',
 		position: 'absolute',
-		right: 4
+		right: 32
+	},
+	chapterPreviewNumberRight: {
+		right: 4,
 	},
 	chapterPreviewDate: {
 		fontSize: 11,
 		position: 'absolute',
 		right: 4,
 		bottom: 4
-	},
-	chapterPreviewBookmarkPressable: {
-		
 	},
 	chapterPreviewBookmarkContainer: {
 		position: 'absolute',
@@ -162,9 +169,30 @@ export default StyleSheet.create({
 	chapterPreviewBookmarkIcon: {
 		position: 'absolute',
 		top: 6,
-		right: 0,
+		right: 4,
 		width: 24,
 		height: 24,
+	},
+	chapterPreviewDownloadContainer: {
+		position: 'absolute',
+		width: 40,
+		height: 40,
+		right: 0,
+		top: 8,
+	},
+	chapterPreviewDownloadIcon: {
+		position: 'absolute',
+		top: 2,
+		right: 4,
+		width: 18,
+		height: 18,
+	},
+	chapterPreviewDeleteIcon: {
+		position: 'absolute',
+		top: 4,
+		right: 6,
+		width: 16,
+		height: 16,
 	},
 	/**** Chapter ****/
 	chapterPageScreen: {
@@ -193,7 +221,7 @@ export default StyleSheet.create({
 		marginRight: 12,
 		fontSize: 16
 	},
-	pagesError: {
+	pagesErrorText: {
 		textAlign: 'center',
 		padding: 16
 	},
@@ -209,6 +237,24 @@ export default StyleSheet.create({
 	},
 	controlPagesPrevious: {
 		left: 0
+	},
+	/**** ChangeChapter ****/
+	changeChapterContainer: {
+		backgroundColor: colors.background + "bb"
+	},
+	changeChapterTitle: {
+		fontSize: 24,
+		fontWeight: 'bold',
+		borderBottomColor: colors.orange,
+		borderBottomWidth: 3
+	},
+	changeChapterClose: {
+		marginTop: 32,
+		flexDirection: 'row',
+		justifyContent: 'space-around'
+	},
+	changeChapterButton: {
+		marginHorizontal: 32
 	},
 	/**** Settings ****/
 	settingsLogo: {
