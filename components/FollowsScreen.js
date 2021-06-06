@@ -63,7 +63,7 @@ const FollowsScreen = ({navigation}) => {
 
 	if (isLoadingChapters)
 		return (<LoadingScreen />);
-	if (!chapters.length)
+	if (!chapters)
 		return (
 			<BackgroundImage>
 				<ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />} contentContainerStyle={styles.scrollView}>
