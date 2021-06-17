@@ -1,4 +1,5 @@
 node_modules
+google-services.json
 .expo*
 npm-debug.*
 *.jks
