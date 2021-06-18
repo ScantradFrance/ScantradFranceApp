@@ -217,6 +217,10 @@ export default StyleSheet.create({
 	chapterPagePagePickerItem: {
 		backgroundColor: colors.secondary
 	},
+	chapterProgressBar: {
+		height: 4,
+		position: 'absolute'
+	},
 	pagesIndicator: {
 		marginRight: 12,
 		fontSize: 16

@@ -9,7 +9,8 @@ import {
 	Pressable,
 	FlatList,
 	Modal,
-	Button
+	Button,
+	Dimensions
 } from 'react-native';
 import BackgroundImage from './BackgroundImage';
 import LoadingScreen from './LoadingScreen';
@@ -20,6 +21,7 @@ import colors from "../assets/styles/colors";
 import { sf_api } from '../config/secrets';
 import { get as fetch } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+const dimensions = Dimensions.get('window');
 
 const ChangeChapterModal = ({ visible, setVisible, next, changeChapter }) => {
 	return (
@@ -169,6 +171,9 @@ const ChapterScreen = ({ navigation, route }) => {
 				setPages(pages);
 				setLoadingPages(false);
 				changeHeaderVisible(true);
+				navigation.setOptions({
+					headerStyle: { borderBottomWidth: 0 }
+				});
 			}).catch(() => setErrorChapters(true));
 		} else {
 			getChapterPages(chapter.manga.id, chapter.number).then(async chapter => {
@@ -183,6 +188,9 @@ const ChapterScreen = ({ navigation, route }) => {
 				setPages(chapter.pages.map((p, i) => ({ uri: p.uri, width: p.width, height: p.height, number: i + 1 })));
 				setLoadingPages(false);
 				changeHeaderVisible(false);
+				navigation.setOptions({
+					headerStyle: { borderBottomWidth: 0 }
+				});
 			}).catch(() => setErrorChapters(true));
 		}
 	};
@@ -254,6 +262,8 @@ const ChapterScreen = ({ navigation, route }) => {
 	)
 	return (
 		<BackgroundImage>
+			<View style={[styles.chapterProgressBar, { width: "100%", backgroundColor: colors.primary, zIndex: 1 }]}></View>
+			<View style={[styles.chapterProgressBar, { width: currentPage / (nbPages - 1) * dimensions.width, backgroundColor: colors.orange, zIndex: 2 }]}></View>
 			<ChapterSettings visible={settingsVisible} setVisible={setSettingsVisible} settingsChanged={settingsChanged} />
 			<ChangeChapterModal visible={changeChapterVisible} setVisible={setChangeChapterVisible} changeChapter={changeChapter} next={japRead ? currentPage === 0 : currentPage > 0} />
 			{
