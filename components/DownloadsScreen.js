@@ -88,7 +88,7 @@ const DownloadsScreen = ({navigation}) => {
 				style={styles.listChapters}
 				data={chapters}
 				renderItem={({ item }) => <ThumbnailChapter navigation={navigation} chapter={item} deleteDownload={deleteDownload} />}
-				keyExtractor={item => item.title}
+				keyExtractor={(_, i) => i + ""}
 				refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
 				ListHeaderComponent={BannerHeader}
 			/>
@@ -98,6 +98,7 @@ const DownloadsScreen = ({navigation}) => {
 
 const ThumbnailChapter = ({ navigation, chapter, deleteDownload }) => {
 	const sliceText = (text, max) => {
+		if (!text) return ["", ""];
 		if (text.length <= max) return [text, ""];
 		let t = text.split(' ');
 		let n = t[0].length, i = 0; while (i < t.length && n < max) { n += t[i].length + 1; i++; }
@@ -106,7 +107,7 @@ const ThumbnailChapter = ({ navigation, chapter, deleteDownload }) => {
 
 	return (
 		<View style={styles.item}>
-			<TouchableHighlight style={styles.chapterPreviewFullContainer} onPress={() => navigation.navigate('Chapter', { chapter: { manga: chapter.manga, number: chapter.number, downloaded: true } })}>
+			<TouchableHighlight style={styles.chapterPreviewFullContainer} onPress={() => navigation.navigate('Chapter', { chapter: { manga: chapter.manga, number: chapter.number }})}>
 				<View>
 					<Text>
 						<TouchableHighlight style={styles.chapterPreviewContainer} onPress={() => navigation.navigate('Manga', { manga: chapter.manga })}>
@@ -129,7 +130,7 @@ const ThumbnailChapter = ({ navigation, chapter, deleteDownload }) => {
 					<Text style={[styles.text, styles.chapterPreviewDate]}>{`Il y a ${chapter.release_date}`}</Text>
 				</View>
 			</TouchableHighlight>
-			<TouchableOpacity style={styles.chapterPreviewDownloadContainer} onPress={() => deleteDownload(chapter.manga.id + "-" + chapter.number)} activeOpacity={0.6}>
+			<TouchableOpacity style={styles.chapterPreviewDownloadContainer} onPress={() => deleteDownload(chapter.manga.id + "-" + Number(chapter.number))} activeOpacity={0.6}>
 				<View>
 					<Image style={[styles.chapterPreviewDownloadIcon, styles.chapterPreviewDeleteIcon]} source={require('../assets/img/delete.png')} />
 				</View>

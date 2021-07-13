@@ -141,13 +141,22 @@ const ChapterScreen = ({ navigation, route }) => {
 	};
 
 	const loadChapters = () => {
-		loadManga(route.params.chapter.manga.id).then(manga => {
-			const number = Number(route.params.chapter.number);
-			manga.chapters.forEach(c => {
-				if (Number(c.number) === number + 1) setNextChapter({ manga: { id: manga.id, name: manga.name }, number: c.number });
-				if (Number(c.number) === number - 1) setPreviousChapter({ manga: { id: manga.id, name: manga.name }, number: c.number });
-			});
-		}).catch(console.error);
+		const chapter = route.params.chapter;
+		AsyncStorage.getItem('downloads').then(d => JSON.parse(d || "{}")).then(async downloads => {
+			const dl_chap = downloads[chapter.manga.id + "-" + Number(chapter.number)];
+			if (!dl_chap) {
+				loadManga(route.params.chapter.manga.id).then(manga => {
+					const number = Number(route.params.chapter.number);
+					manga.chapters.forEach(c => {
+						if (Number(c.number) === number + 1) setNextChapter({ manga: { id: manga.id, name: manga.name }, number: c.number });
+						if (Number(c.number) === number - 1) setPreviousChapter({ manga: { id: manga.id, name: manga.name }, number: c.number });
+					});
+				}).catch(() => {});
+			} else {
+				if (downloads[chapter.manga.id + "-" + (Number(chapter.number) + 1)]) setNextChapter({ manga: { id: chapter.manga.id, name: chapter.manga.name }, number: leftPad(Number(chapter.number) + 1, 3) });
+				if (downloads[chapter.manga.id + "-" + (Number(chapter.number) - 1)]) setPreviousChapter({ manga: { id: chapter.manga.id, name: chapter.manga.name }, number: leftPad(Number(chapter.number) - 1, 3) });
+			}
+		}).catch(() => {});
 	};
 
 	const getChapterPages = (manga_id, number) => {
@@ -156,10 +165,26 @@ const ChapterScreen = ({ navigation, route }) => {
 
 	const loadChapterPages = () => {
 		const chapter = route.params.chapter;
-		if (chapter.downloaded) {
-			AsyncStorage.getItem('downloads').then(d => JSON.parse(d || "{}")).then(async downloads => {
-				const dl_chap = downloads[chapter.manga.id + "-" + chapter.number];
-				if (!dl_chap) return setErrorChapters(true);
+		AsyncStorage.getItem('downloads').then(d => JSON.parse(d || "{}")).then(async downloads => {
+			const dl_chap = downloads[chapter.manga.id + "-" + Number(chapter.number)];
+			if (!dl_chap) {
+				getChapterPages(chapter.manga.id, chapter.number).then(async chapter => {
+					setNbPages(chapter.length);
+					setType(chapter.pages[0].uri.includes("?top=") ? "webtoon" : "manga");
+					const uris = chapter.pages.map(p => p.uri);
+					Image.queryCache(uris).then(cache => {
+						uris.forEach(uri => {
+							if (!cache[uri]) Image.prefetch(uri);
+						});
+					});
+					setPages(chapter.pages.map((p, i) => ({ uri: p.uri, width: p.width, height: p.height, number: i + 1 })));
+					setLoadingPages(false);
+					changeHeaderVisible(false);
+					navigation.setOptions({
+						headerStyle: { borderBottomWidth: 0 }
+					});
+				}).catch(() => setErrorChapters(true));
+			} else {
 				setNbPages(dl_chap.pages.length);
 				const pages = await Promise.all(dl_chap.pages.map(async (p, i) => {
 					let ret = null;
@@ -174,25 +199,8 @@ const ChapterScreen = ({ navigation, route }) => {
 				navigation.setOptions({
 					headerStyle: { borderBottomWidth: 0 }
 				});
-			}).catch(() => setErrorChapters(true));
-		} else {
-			getChapterPages(chapter.manga.id, chapter.number).then(async chapter => {
-				setNbPages(chapter.length);
-				setType(chapter.pages[0].uri.includes("?top=") ? "webtoon" : "manga");
-				const uris = chapter.pages.map(p => p.uri);
-				Image.queryCache(uris).then(cache => {
-					uris.forEach(uri => {
-						if (!cache[uri]) Image.prefetch(uri);
-					});
-				});
-				setPages(chapter.pages.map((p, i) => ({ uri: p.uri, width: p.width, height: p.height, number: i + 1 })));
-				setLoadingPages(false);
-				changeHeaderVisible(false);
-				navigation.setOptions({
-					headerStyle: { borderBottomWidth: 0 }
-				});
-			}).catch(() => setErrorChapters(true));
-		}
+			}
+		}).catch(() => setErrorChapters(true));
 	};
 
 	const onRefresh = () => {
@@ -306,6 +314,15 @@ const ChapterScreen = ({ navigation, route }) => {
 			}
 		</BackgroundImage>
 	);
+}
+
+// https://stackoverflow.com/a/8043254
+function leftPad(number, targetLength) {
+	var output = number + '';
+	while (output.length < targetLength) {
+		output = '0' + output;
+	}
+	return output;
 }
 
 module.exports = ChapterScreen;

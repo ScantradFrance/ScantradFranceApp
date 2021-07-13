@@ -120,6 +120,7 @@ const ThumbnailManga = ({ navigation, manga, isFollowing, changeFollowed }) => {
 	}
 
 	const sliceText = (text, max) => {
+		if (!text) return ["", ""];
 		if (text.length <= max) return [text, ""];
 		let t = text.split(' ');
 		let n = 0, i = 0; while (i < t.length && n <= max) { n += t[i].length+1; i++; }

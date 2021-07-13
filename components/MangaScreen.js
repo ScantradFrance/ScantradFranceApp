@@ -5,7 +5,8 @@ import {
 	Text,
 	TouchableHighlight,
 	FlatList,
-	TouchableOpacity
+	TouchableOpacity,
+	ToastAndroid
 } from 'react-native';
 import BackgroundImage from './BackgroundImage';
 import LoadingScreen from './LoadingScreen';
@@ -13,24 +14,77 @@ import styles from "../assets/styles/styles";
 import { sf_api } from '../config/secrets';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { get, post } from 'axios';
+import * as FileSystem from 'expo-file-system';
 
-const ThumbnailChapter = ({ navigation, chapter, manga }) => {
+const ThumbnailChapter = ({ navigation, chapter, manga, isDownloaded }) => {
+
+	const [downloaded, setDownloaded] = useState(isDownloaded);
+	const [downloadProgress, setDownloadProgress] = useState(0);
+	const folderpath = `${FileSystem.documentDirectory}${manga.id}-${Number(chapter.number)}/`;
+	const progress = { done: 0, total: 0 };
+
+	const progressHandler = reset => {
+		if (reset) {
+			progress.done = 0;
+			progress.total = 0;
+			setDownloadProgress(0);
+			return;
+		}
+		progress.done++;
+		setDownloadProgress(progress.done / progress.total);
+	}
+
+	const getChapterPages = () => get(`${sf_api.url}chapters/${manga.id}/${chapter.number}`).then(res => res.data.pages);
+
+	const downloadPages = async () => {
+		if (downloaded) return;
+		ToastAndroid.show("Téléchargement du chapitre", ToastAndroid.SHORT);
+
+		// create directory
+		await FileSystem.makeDirectoryAsync(folderpath).catch(() => {});
+
+		// download pages
+		const id = manga.id + "-" + Number(chapter.number);
+		getChapterPages().then(pages => {
+			progress.total = pages.length;
+			Promise.all(pages.map((p, i) => FileSystem.createDownloadResumable(p.uri, `${folderpath + (i + 1)}.jpg`).downloadAsync().then(res => { progressHandler(); return res.uri; })))
+				.then(uris => {
+					AsyncStorage.getItem('downloads').then(d => JSON.parse(d || "{}")).then(downloads => {
+						downloads[id] = { ...chapter, manga: manga, pages: uris, type: pages[0].uri.includes("?top") ? "webtoon" : "manga" };
+						AsyncStorage.setItem('downloads', JSON.stringify(downloads)).then(() => {
+							setDownloaded(true);
+							progressHandler(true);
+							ToastAndroid.show("Chapitre téléchargé", ToastAndroid.SHORT);
+						}).catch(() => setErrorChapters(true));
+					});
+				});
+		}).catch(() => ToastAndroid.show("Erreur lors du téléchargement du chapitre", ToastAndroid.SHORT));
+	}
+
 	return (
-		<View style={[styles.item, { alignItems: "center" }]}>
-			<TouchableHighlight style={[styles.mangaChapterPreview, styles.mangaChapterPreviewShort]} onPress={() => navigation.navigate('Chapter', { chapter: { ...chapter, manga: manga }})}>
+		<View style={styles.item}>
+			<TouchableHighlight style={styles.chapterPreviewFullContainer} onPress={() => navigation.navigate('Chapter', { chapter: { ...chapter, manga: manga }})}>
 				<View>
+					<View style={[styles.chapterPreviewThumbnail, styles.chapterPreviewProgress, { transform: [{ translateX: Math.ceil(downloadProgress * 64) }] }]}></View>
 					<Text>
-						<View>
-							<Image style={styles.chapterPreviewThumbnail} source={{ uri: manga.thumbnail }} fadeDuration={0} />
-							<View style={styles.chapterPreviewThumbnailBorder} />
+						<View style={styles.chapterPreviewContainer}>
+							<View>
+								<Image style={styles.chapterPreviewThumbnail} source={{ uri: manga.thumbnail }} fadeDuration={0} />
+								<View style={styles.chapterPreviewThumbnailBorder} />
+							</View>
 						</View>
 					</Text>
 					<View>
-						<Text style={[styles.text, styles.chapterPreviewNumber, styles.chapterPreviewNumberRight, { top: -64 }]}>Chapitre {chapter.number}</Text>
+						<Text style={[styles.text, styles.chapterPreviewNumber, styles.chapterPreviewNumberLeft, { top: -64 }]}>Chapitre {chapter.number}</Text>
 						<Text style={[styles.text, styles.chapterPreviewDate]}>{`Il y a ${chapter.release_date}`}</Text>
 					</View>
 				</View>
 			</TouchableHighlight>
+			<TouchableOpacity style={styles.chapterPreviewDownloadContainer} onPress={downloadPages} activeOpacity={0.6}>
+				<View>
+					<Image style={styles.chapterPreviewDownloadIcon} source={downloaded ? require('../assets/img/download_filled.png') : require('../assets/img/download_white.png')} />
+				</View>
+			</TouchableOpacity>
 		</View>
 	);
 };
@@ -62,13 +116,22 @@ const MangaScreen = ({ navigation, route }) => {
 	
 	const [token, setToken] = useState('');
 	const [isLoadingManga, setLoadingManga] = useState(true);
+	const [isLoadingDownloads, setLoadingDownloads] = useState(true);
 	const [errorManga, setErrorManga] = useState(false);
 	const [manga, setManga] = useState(null);
+	const [downloads, setDownloads] = useState({});
 	const [follows, setFollows] = useState([]);
 
 	const loadManga = manga_id => {
 		return get(sf_api.url + "mangas/" + manga_id).then(res => res.data);
 	};
+
+	const loadDownloads = () => {
+		AsyncStorage.getItem('downloads').then(d => JSON.parse(d || "{}")).then(downloads => {
+			setDownloads(downloads);
+			setLoadingDownloads(false);
+		});
+	}
 
 	const updateBookmark = () => {
 		navigation.setOptions({
@@ -105,6 +168,7 @@ const MangaScreen = ({ navigation, route }) => {
 			setManga(manga);
 			loadFollows();
 		}).catch(() => setErrorManga(true));
+		loadDownloads();
 	}, [token]);
 
 	useEffect(() => {
@@ -117,7 +181,7 @@ const MangaScreen = ({ navigation, route }) => {
 		if (manga) setLoadingManga(false);
 	}, [manga]);
 
-	if (isLoadingManga)
+	if (isLoadingManga || isLoadingDownloads)
 		return (<LoadingScreen />);
 	if (errorManga)
 		return (
@@ -132,9 +196,10 @@ const MangaScreen = ({ navigation, route }) => {
 	return (
 		<BackgroundImage>
 			<FlatList
+				style={styles.listChapters}
 				data={manga.chapters}
-				renderItem={({ item }) => <ThumbnailChapter navigation={navigation} chapter={item} manga={{ id: manga.id, name: manga.name, thumbnail: manga.thumbnail }} />}
-				keyExtractor={(_, i) => i+""}
+				renderItem={({ item }) => <ThumbnailChapter navigation={navigation} chapter={item} manga={{ id: manga.id, name: manga.name, thumbnail: manga.thumbnail }} isDownloaded={!!downloads[manga.id + "-" + Number(item.number)]} />}
+				keyExtractor={(_, i) => i + ""}
 				ListHeaderComponent={MangaHeader(manga)}
 			/>
 		</BackgroundImage>

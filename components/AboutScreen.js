@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 import BackgroundImage from './BackgroundImage';
 import styles from "../assets/styles/styles";
+import Constants from 'expo-constants';
 
 
 const AboutScreen = () => {
@@ -40,7 +41,7 @@ const AboutScreen = () => {
 					</View>
 				</View>
 				<View style={styles.aboutVersion}>
-					<Text style={[styles.text, styles.aboutVersionText]}>v2.3.1</Text>
+					<Text style={[styles.text, styles.aboutVersionText]}>v{Constants.manifest.version}</Text>
 				</View>
 			</View>
 		</BackgroundImage>

@@ -58,7 +58,6 @@ const HomeScreen = ({ navigation }) => {
 
 	useEffect(() => {
 		Image.resolveAssetSource({ uri: '../assets/img/download_filled.png' });
-		Image.resolveAssetSource({ uri: '../assets/img/download.png' });
 		Image.resolveAssetSource({ uri: '../assets/img/download_white.png' });
 
 		loadChapters();
@@ -86,7 +85,7 @@ const HomeScreen = ({ navigation }) => {
 			<FlatList
 				style={styles.listChapters}
 				data={chapters}
-				renderItem={({ item }) => <ThumbnailChapter navigation={navigation} chapter={item} isDownloaded={!!downloads[item.manga.id + "-" + item.number]} />}
+				renderItem={({ item }) => <ThumbnailChapter navigation={navigation} chapter={item} isDownloaded={!!downloads[item.manga.id + "-" + Number(item.number)]} />}
 				keyExtractor={item => item.title}
 				refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
 				ListHeaderComponent={BannerHeader}
@@ -99,7 +98,7 @@ const ThumbnailChapter = ({ navigation, chapter, isDownloaded }) => {
 
 	const [downloaded, setDownloaded] = useState(isDownloaded);
 	const [downloadProgress, setDownloadProgress] = useState(0);
-	const folderpath = `${FileSystem.documentDirectory}${chapter.manga.id}-${chapter.number}/`;
+	const folderpath = `${FileSystem.documentDirectory}${chapter.manga.id}-${Number(chapter.number)}/`;
 	const progress = { done: 0, total: 0 };
 
 	const progressHandler = reset => {
@@ -113,7 +112,7 @@ const ThumbnailChapter = ({ navigation, chapter, isDownloaded }) => {
 		setDownloadProgress(progress.done / progress.total);
 	}
 
-	const getChapterPages = () => get(sf_api.url + "chapters/" + chapter.manga.id + "/" + chapter.number).then(res => res.data.pages);
+	const getChapterPages = () => get(`${sf_api.url}chapters/${chapter.manga.id}/${chapter.number}`).then(res => res.data.pages);
 
 	const downloadPages = async () => {
 		if (downloaded) return;
@@ -123,7 +122,7 @@ const ThumbnailChapter = ({ navigation, chapter, isDownloaded }) => {
 		await FileSystem.makeDirectoryAsync(folderpath).catch(() => {});
 
 		// download pages
-		const id = chapter.manga.id + "-" + chapter.number;
+		const id = chapter.manga.id + "-" + Number(chapter.number);
 		getChapterPages().then(pages => {
 			progress.total = pages.length;
 			Promise.all(pages.map((p, i) => FileSystem.createDownloadResumable(p.uri, `${folderpath + (i + 1)}.jpg`).downloadAsync().then(res => { progressHandler(); return res.uri; })))
@@ -141,15 +140,16 @@ const ThumbnailChapter = ({ navigation, chapter, isDownloaded }) => {
 	}
 
 	const sliceText = (text, max) => {
+		if (!text) return ["", ""];
 		if (text.length <= max) return [text, ""];
 		let t = text.split(' ');
-		let n = t[0].length, i = 0; while(i < t.length && n < max) { n += t[i].length+1; i++; }
+		let n = t[0].length, i = 0; while (i < t.length && n < max) { n += t[i].length+1; i++; }
 		return [t.slice(0, i-1).join(' '), t.slice(i-1).join(' ')];
 	};
 
 	return (
 		<View style={styles.item}>
-			<TouchableHighlight style={styles.chapterPreviewFullContainer} onPress={() => navigation.navigate('Chapter', { chapter: { manga: chapter.manga, number: chapter.number, downloaded: downloaded } })}>
+			<TouchableHighlight style={styles.chapterPreviewFullContainer} onPress={() => navigation.navigate('Chapter', { chapter: { manga: chapter.manga, number: chapter.number } })}>
 				<View>
 					<View style={[styles.chapterPreviewThumbnail, styles.chapterPreviewProgress, { transform: [{ translateX: Math.ceil(downloadProgress * 64) }]}]}></View>
 					<Text>

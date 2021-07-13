@@ -3,7 +3,7 @@
 	"name": "ScantradFranceApp",
 	"slug": "ScantradFranceApp",
 	"privacy": "unlisted",
-	"version": "2.3.0",
+	"version": "2.4.0",
 	"orientation": "portrait",
 	"icon": "./assets/img/icon.png",
 	"splash": {

@@ -99,7 +99,7 @@ export default StyleSheet.create({
 		borderRadius: 4,
 	},
 	mangaChapterPreviewShort: {
-		width: "50%",
+		width: "60%",
 		alignContent: "center"
 	},
 	chapterPreviewFullContainer: {
@@ -150,8 +150,8 @@ export default StyleSheet.create({
 		position: 'absolute',
 		right: 32
 	},
-	chapterPreviewNumberRight: {
-		right: 4,
+	chapterPreviewNumberLeft: {
+		left: 74,
 	},
 	chapterPreviewDate: {
 		fontSize: 11,

@@ -121,11 +121,11 @@ const App = () => {
 
 	const checkUpdate = async () => {
 		try {
-			const update = await Updates.checkForUpdateAsync();
+			const update = await Updates.checkForUpdateAsync().catch(() => {});
 			if (update.isAvailable) {
 				ToastAndroid.show("Mise à jour de l'application...", ToastAndroid.SHORT);
-				await Updates.fetchUpdateAsync();
-				await Updates.reloadAsync();
+				await Updates.fetchUpdateAsync().catch(() => {});
+				await Updates.reloadAsync().catch(() => {});
 			}
 		} catch (_) {}
 	};
@@ -137,7 +137,7 @@ const App = () => {
 				{ token: token },
 				{ headers: { Authorization: `Bearer ${sf_api.token}` }}
 			).catch(() => {});
-		});
+		}).catch(() => {});
 	};
 
 	async function registerForPushNotificationsAsync() {
@@ -153,7 +153,7 @@ const App = () => {
 			}
 			// Failed to get push token for push notification!
 			if (finalStatus !== 'granted') return;
-			token = (await Notifications.getExpoPushTokenAsync().catch(() => {})).data;
+			token = ((await Notifications.getExpoPushTokenAsync()) || {}).data;
 		}
 		
 		if (Platform.OS === 'android') {

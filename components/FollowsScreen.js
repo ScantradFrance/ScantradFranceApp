@@ -6,7 +6,9 @@ import {
 	Text,
 	FlatList,
 	TouchableHighlight,
-	ScrollView
+	TouchableOpacity,
+	ScrollView,
+	ToastAndroid
 } from 'react-native';
 import BackgroundImage from './BackgroundImage';
 import LoadingScreen from './LoadingScreen';
@@ -15,13 +17,16 @@ import styles from "../assets/styles/styles";
 import { sf_api } from '../config/secrets';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { get, post } from 'axios';
+import * as FileSystem from 'expo-file-system';
 
 const FollowsScreen = ({navigation}) => {
 
 	const [token, setToken] = useState('');
 	const [isLoadingChapters, setLoadingChapters] = useState(true);
+	const [isLoadingDownloads, setLoadingDownloads] = useState(true);
 	const [errorChapters, setErrorChapters] = useState(false);
 	const [chapters, setChapters] = useState(null);
+	const [downloads, setDownloads] = useState({});
 	const [refreshing, setRefreshing] = useState(false);
 
 	const getLastChapters = async limit => {
@@ -45,16 +50,30 @@ const FollowsScreen = ({navigation}) => {
 		setRefreshing(true);
 		setErrorChapters(false);
 		setLoadingChapters(true);
+		setLoadingDownloads(true);
 		loadChapters();
+		loadDownloads();
 		setRefreshing(false);
 	};
 
+	const loadDownloads = () => {
+		AsyncStorage.getItem('downloads').then(d => JSON.parse(d || "{}")).then(downloads => {
+			setDownloads(downloads);
+			setLoadingDownloads(false);
+		});
+	}
+
 	useEffect(() => {
+		Image.resolveAssetSource({ uri: '../assets/img/download_filled.png' });
+		Image.resolveAssetSource({ uri: '../assets/img/download_white.png' });
+		
 		AsyncStorage.getItem('token').then(token => setToken(token));
 	}, []);
 
 	useEffect(() => {
-		if (token !== '') loadChapters();
+		if (token === '') return;
+		loadChapters();
+		loadDownloads();
 	}, [token]);
 
 	useEffect(() => {
@@ -91,18 +110,64 @@ const FollowsScreen = ({navigation}) => {
 	);
 }
 
-const ThumbnailChapter = ({ navigation, chapter }) => {
+const ThumbnailChapter = ({ navigation, chapter, isDownloaded }) => {
+
+	const [downloaded, setDownloaded] = useState(isDownloaded);
+	const [downloadProgress, setDownloadProgress] = useState(0);
+	const folderpath = `${FileSystem.documentDirectory}${chapter.manga.id}-${Number(chapter.number)}/`;
+	const progress = { done: 0, total: 0 };
+
+	const progressHandler = reset => {
+		if (reset) {
+			progress.done = 0;
+			progress.total = 0;
+			setDownloadProgress(0);
+			return;
+		}
+		progress.done++;
+		setDownloadProgress(progress.done / progress.total);
+	}
+
+	const getChapterPages = () => get(`${sf_api.url}chapters/${chapter.manga.id}/${chapter.number}`).then(res => res.data.pages);
+
+	const downloadPages = async () => {
+		if (downloaded) return;
+		ToastAndroid.show("Téléchargement du chapitre", ToastAndroid.SHORT);
+
+		// create directory
+		await FileSystem.makeDirectoryAsync(folderpath).catch(() => {});
+
+		// download pages
+		const id = chapter.manga.id + "-" + Number(chapter.number);
+		getChapterPages().then(pages => {
+			progress.total = pages.length;
+			Promise.all(pages.map((p, i) => FileSystem.createDownloadResumable(p.uri, `${folderpath + (i + 1)}.jpg`).downloadAsync().then(res => { progressHandler(); return res.uri; })))
+			.then(uris => {
+				AsyncStorage.getItem('downloads').then(d => JSON.parse(d || "{}")).then(downloads => {
+					downloads[id] = { ...chapter, pages: uris, type: pages[0].uri.includes("?top") ? "webtoon" : "manga" };
+					AsyncStorage.setItem('downloads', JSON.stringify(downloads)).then(() => {
+						setDownloaded(true);
+						progressHandler(true);
+						ToastAndroid.show("Chapitre téléchargé", ToastAndroid.SHORT);
+					}).catch(() => setErrorChapters(true));
+				});
+			});
+		}).catch(() => ToastAndroid.show("Erreur lors du téléchargement du chapitre", ToastAndroid.SHORT));
+	}
+
 	const sliceText = (text, max) => {
+		if (!text) return ["", ""];
 		if (text.length <= max) return [text, ""];
 		let t = text.split(' ');
 		let n = t[0].length, i = 0; while (i < t.length && n < max) { n += t[i].length + 1; i++; }
-		return [t.slice(0, i - 1).join(' '), t.slice(i - 1).join(' ')];
+		return [t.slice(0, i-1).join(' '), t.slice(i-1).join(' ')];
 	};
 
 	return (
 		<View style={styles.item}>
 			<TouchableHighlight style={styles.chapterPreviewFullContainer} onPress={() => navigation.navigate('Chapter', { chapter: chapter })}>
 				<View>
+					<View style={[styles.chapterPreviewThumbnail, styles.chapterPreviewProgress, { transform: [{ translateX: Math.ceil(downloadProgress * 64) }] }]}></View>
 					<Text>
 						<TouchableHighlight style={styles.chapterPreviewContainer} onPress={() => navigation.navigate('Manga', { manga: chapter.manga })}>
 							<View>
@@ -124,6 +189,11 @@ const ThumbnailChapter = ({ navigation, chapter }) => {
 					<Text style={[styles.text, styles.chapterPreviewDate]}>{`Il y a ${chapter.release_date}`}</Text>
 				</View>
 			</TouchableHighlight>
+			<TouchableOpacity style={styles.chapterPreviewDownloadContainer} onPress={downloadPages} activeOpacity={0.6}>
+				<View>
+					<Image style={styles.chapterPreviewDownloadIcon} source={downloaded ? require('../assets/img/download_filled.png') : require('../assets/img/download_white.png')} />
+				</View>
+			</TouchableOpacity>
 		</View>
 	);
 };
