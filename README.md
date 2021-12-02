@@ -7,7 +7,7 @@ npm start
 ```
 
 ## Android APK
-[Télécharger](https://ldgr.fr/shared/ScantradFranceApp.apk)
+[Télécharger](https://github.com/ScantradFrance/ScantradFranceApp/releases/download/v2.4/ScantradFranceApp.apk)
 
 ## License
 [ALV](LICENSE)
